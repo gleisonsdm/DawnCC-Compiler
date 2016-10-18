@@ -1,0 +1,363 @@
+diff --git a/include/llvm/Analysis/RegionInfoImpl.h b/include/llvm/Analysis/RegionInfoImpl.h
+index b31eefc..32194cf 100644
+--- a/include/llvm/Analysis/RegionInfoImpl.h
++++ b/include/llvm/Analysis/RegionInfoImpl.h
+@@ -57,7 +57,6 @@ void RegionBase<Tr>::replaceEntry(BlockT *BB) {
+ 
+ template <class Tr>
+ void RegionBase<Tr>::replaceExit(BlockT *BB) {
+-  assert(exit && "No exit to replace!");
+   exit = BB;
+ }
+ 
+diff --git a/include/llvm/Analysis/ScalarEvolution.h b/include/llvm/Analysis/ScalarEvolution.h
+index d47cab8..c32b7f1 100644
+--- a/include/llvm/Analysis/ScalarEvolution.h
++++ b/include/llvm/Analysis/ScalarEvolution.h
+@@ -501,15 +501,6 @@ namespace llvm {
+     /// CouldNotCompute.
+     ExitLimit HowFarToNonZero(const SCEV *V, const Loop *L);
+ 
+-    /// HowManyLessThans - Return the number of times an exit condition
+-    /// containing the specified less-than comparison will execute.  If not
+-    /// computable, return CouldNotCompute. isSigned specifies whether the
+-    /// less-than is signed.
+-    ExitLimit HowManyLessThans(const SCEV *LHS, const SCEV *RHS,
+-                               const Loop *L, bool isSigned, bool IsSubExpr);
+-    ExitLimit HowManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
+-                                  const Loop *L, bool isSigned, bool IsSubExpr);
+-
+     /// getPredecessorWithUniqueSuccessorForBB - Return a predecessor of BB
+     /// (which may not be an immediate predecessor) which has exactly one
+     /// successor from which BB is reachable, or null if no such block is
+@@ -811,6 +802,15 @@ namespace llvm {
+     // return SCEVCouldNotCompute.
+     const SCEV *getExitCount(Loop *L, BasicBlock *ExitingBlock);
+ 
++    /// HowManyLessThans - Return the number of times an exit condition
++    /// containing the specified less-than comparison will execute.  If not
++    /// computable, return CouldNotCompute. isSigned specifies whether the
++    /// less-than is signed.
++    ExitLimit HowManyLessThans(const SCEV *LHS, const SCEV *RHS,
++                               const Loop *L, bool isSigned, bool IsSubExpr);
++    ExitLimit HowManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
++                                  const Loop *L, bool isSigned, bool IsSubExpr);
++
+     /// getBackedgeTakenCount - If the specified loop has a predictable
+     /// backedge-taken count, return it, otherwise return a SCEVCouldNotCompute
+     /// object. The backedge-taken count is the number of times the loop header
+@@ -833,6 +833,10 @@ namespace llvm {
+     /// has an analyzable loop-invariant backedge-taken count.
+     bool hasLoopInvariantBackedgeTakenCount(const Loop *L);
+ 
++    /// Determines if the terminator of a given exiting block consistently
++    /// controls the exit count of a loop.
++    static bool hasConsistentTerminator(const Loop *L, BasicBlock *ExitingBlock);
++
+     /// forgetLoop - This method should be called by the client when it has
+     /// changed a loop in a way that may effect ScalarEvolution's ability to
+     /// compute a trip count, or if the loop is deleted.  This call is
+diff --git a/include/llvm/Analysis/ScalarEvolutionExpander.h b/include/llvm/Analysis/ScalarEvolutionExpander.h
+index 8ec2078..c737874 100644
+--- a/include/llvm/Analysis/ScalarEvolutionExpander.h
++++ b/include/llvm/Analysis/ScalarEvolutionExpander.h
+@@ -80,9 +80,6 @@ namespace llvm {
+     /// already in "expanded" form.
+     bool LSRMode;
+ 
+-    typedef IRBuilder<true, TargetFolder> BuilderType;
+-    BuilderType Builder;
+-
+ #ifndef NDEBUG
+     const char *DebugType;
+ #endif
+@@ -101,6 +98,8 @@ namespace llvm {
+ #endif
+     }
+ 
++    virtual ~SCEVExpander() {}
++
+ #ifndef NDEBUG
+     void setDebugType(const char* s) { DebugType = s; }
+ #endif
+@@ -178,6 +177,18 @@ namespace llvm {
+ 
+     void enableLSRMode() { LSRMode = true; }
+ 
++    Instruction *getInsertPoint() {
++      return Builder.GetInsertPoint();
++    }
++
++    void SetInsertPoint(BasicBlock *bb, BasicBlock::iterator ip) {
++      Builder.SetInsertPoint(bb, ip);
++    }
++
++    void SetInsertPoint(Instruction *i) {
++      Builder.SetInsertPoint(i);
++    }
++
+     /// \brief Clear the current insertion point. This is useful if the
+     /// instruction that had been serving as the insertion point may have been
+     /// deleted.
+@@ -193,8 +204,16 @@ namespace llvm {
+ 
+     void setChainedPhi(PHINode *PN) { ChainedPhis.insert(PN); }
+ 
+-  private:
+-    LLVMContext &getContext() const { return SE.getContext(); }
++  protected:
++    typedef IRBuilder<true, TargetFolder> BuilderType;
++    BuilderType Builder;
++
++    Value* getSavedExpression(const SCEV *S, Instruction *InsertPt);
++
++    void rememberExpression(const SCEV *S, Instruction *InsertPt,
++                                          Value *V);
++
++    void rememberInstruction(Value *I);
+ 
+     /// \brief Recursive helper function for isHighCostExpansion.
+     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
+@@ -204,6 +223,16 @@ namespace llvm {
+     /// of work to avoid inserting an obviously redundant operation.
+     Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS);
+ 
++    // Simple builder interface.
++    Value *InsertCast(Instruction::CastOps Op, Value *V, Type *DestTy);
++    Value *InsertICmp(CmpInst::Predicate P, Value *LHS, Value *RHS);
++    Value *InsertSelect(Value *C, Value *True, Value *False, const Twine &Name = "");
++
++    /// InsertNoopCastOfTo - Insert a cast of V to the specified type,
++    /// which must be possible with a noop cast, doing what we can to
++    /// share the casts.
++    Value *InsertNoopCastOfTo(Value *V, Type *Ty);
++
+     /// \brief Arrange for there to be a cast of V to Ty at IP, reusing an
+     /// existing cast if a suitable one exists, moving an existing cast if a
+     /// suitable one exists but isn't in the right place, or or creating a new
+@@ -212,27 +241,12 @@ namespace llvm {
+                              Instruction::CastOps Op,
+                              BasicBlock::iterator IP);
+ 
+-    /// \brief Insert a cast of V to the specified type, which must be possible
+-    /// with a noop cast, doing what we can to share the casts.
+-    Value *InsertNoopCastOfTo(Value *V, Type *Ty);
+-
+-    /// \brief Expand a SCEVAddExpr with a pointer type into a GEP
+-    /// instead of using ptrtoint+arithmetic+inttoptr.
+-    Value *expandAddToGEP(const SCEV *const *op_begin,
+-                          const SCEV *const *op_end,
+-                          PointerType *PTy, Type *Ty, Value *V);
+-
+-    Value *expand(const SCEV *S);
+-
+     /// \brief Insert code to directly compute the specified SCEV expression
+     /// into the program.  The inserted code is inserted into the SCEVExpander's
+     /// current insertion point. If a type is specified, the result will be
+     /// expanded to have that type, with a cast if necessary.
+     Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
+ 
+-    /// \brief Determine the most "relevant" loop for the given SCEV.
+-    const Loop *getRelevantLoop(const SCEV *);
+-
+     Value *visitConstant(const SCEVConstant *S) {
+       return S->getValue();
+     }
+@@ -259,7 +273,19 @@ namespace llvm {
+       return S->getValue();
+     }
+ 
+-    void rememberInstruction(Value *I);
++  private:
++    LLVMContext &getContext() const { return SE.getContext(); }
++
++    /// expandAddToGEP - Expand a SCEVAddExpr with a pointer type into a GEP
++    /// instead of using ptrtoint+arithmetic+inttoptr.
++    Value *expandAddToGEP(const SCEV *const *op_begin,
++                          const SCEV *const *op_end,
++                          PointerType *PTy, Type *Ty, Value *V);
++
++    virtual Value *expand(const SCEV *S);
++
++    /// getRelevantLoop - Determine the most "relevant" loop for the given SCEV.
++    const Loop *getRelevantLoop(const SCEV *);
+ 
+     bool isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
+ 
+diff --git a/lib/Analysis/DependenceAnalysis.cpp b/lib/Analysis/DependenceAnalysis.cpp
+index 4826ac4..dac36df 100644
+--- a/lib/Analysis/DependenceAnalysis.cpp
++++ b/lib/Analysis/DependenceAnalysis.cpp
+@@ -3366,6 +3366,12 @@ DependenceAnalysis::depends(Instruction *Src, Instruction *Dst,
+                                  SrcPtr)) {
+   case MayAlias:
+   case PartialAlias:
++    // Check if the instructions themselves can alias each other.
++    if (!AA->alias(MemoryLocation::get(Src), MemoryLocation::get(Dst))) {
++      DEBUG(dbgs() << "instructions do not alias\n");
++      return nullptr;
++    }
++
+     // cannot analyse objects if we don't understand their aliasing.
+     DEBUG(dbgs() << "can't analyze may or partial alias\n");
+     return make_unique<Dependence>(Src, Dst);
+diff --git a/lib/Analysis/ScalarEvolution.cpp b/lib/Analysis/ScalarEvolution.cpp
+index 9c7c175..93c618a 100644
+--- a/lib/Analysis/ScalarEvolution.cpp
++++ b/lib/Analysis/ScalarEvolution.cpp
+@@ -4906,11 +4906,9 @@ ScalarEvolution::ComputeBackedgeTakenCount(const Loop *L) {
+   return BackedgeTakenInfo(ExitCounts, CouldComputeBECount, MaxBECount);
+ }
+ 
+-/// ComputeExitLimit - Compute the number of times the backedge of the specified
+-/// loop will execute if it exits via the specified block.
+-ScalarEvolution::ExitLimit
+-ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+-
++bool
++ScalarEvolution::hasConsistentTerminator(const Loop *L,
++                                         BasicBlock *ExitingBlock) {
+   // Okay, we've chosen an exiting block.  See what condition causes us to
+   // exit at this block and remember the exit block and whether all other targets
+   // lead to the loop header.
+@@ -4920,7 +4918,7 @@ ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+        SI != SE; ++SI)
+     if (!L->contains(*SI)) {
+       if (Exit) // Multiple exit successors.
+-        return getCouldNotCompute();
++        return false;
+       Exit = *SI;
+     } else if (*SI != L->getHeader()) {
+       MustExecuteLoopHeader = false;
+@@ -4950,7 +4948,7 @@ ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+     for (BasicBlock *BB = ExitingBlock; BB; ) {
+       BasicBlock *Pred = BB->getUniquePredecessor();
+       if (!Pred)
+-        return getCouldNotCompute();
++        return false;
+       TerminatorInst *PredTerm = Pred->getTerminator();
+       for (unsigned i = 0, e = PredTerm->getNumSuccessors(); i != e; ++i) {
+         BasicBlock *PredSucc = PredTerm->getSuccessor(i);
+@@ -4959,7 +4957,7 @@ ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+         // If the predecessor has a successor that isn't BB and isn't
+         // outside the loop, assume the worst.
+         if (L->contains(PredSucc))
+-          return getCouldNotCompute();
++          return false;
+       }
+       if (Pred == L->getHeader()) {
+         Ok = true;
+@@ -4968,9 +4966,19 @@ ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+       BB = Pred;
+     }
+     if (!Ok)
+-      return getCouldNotCompute();
++      return false;
+   }
+ 
++  return true;
++}
++
++/// ComputeExitLimit - Compute the number of times the backedge of the specified
++/// loop will execute if it exits via the specified block.
++ScalarEvolution::ExitLimit
++ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
++  if (!hasConsistentTerminator(L, ExitingBlock))
++    return getCouldNotCompute();
++
+   bool IsOnlyExit = (L->getExitingBlock() != nullptr);
+   TerminatorInst *Term = ExitingBlock->getTerminator();
+   if (BranchInst *BI = dyn_cast<BranchInst>(Term)) {
+@@ -4981,9 +4989,18 @@ ScalarEvolution::ComputeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
+                                     /*ControlsExit=*/IsOnlyExit);
+   }
+ 
+-  if (SwitchInst *SI = dyn_cast<SwitchInst>(Term))
++  if (SwitchInst *SI = dyn_cast<SwitchInst>(Term)) {
++    BasicBlock *Exit = nullptr;
++    for (succ_iterator SI = succ_begin(ExitingBlock), SE = succ_end(ExitingBlock);
++         SI != SE; ++SI)
++      if (!L->contains(*SI)) {
++        Exit = *SI;
++        break;
++      }
++
+     return ComputeExitLimitFromSingleExitSwitch(L, SI, Exit,
+                                                 /*ControlsExit=*/IsOnlyExit);
++  }
+ 
+   return getCouldNotCompute();
+ }
+diff --git a/lib/Analysis/ScalarEvolutionExpander.cpp b/lib/Analysis/ScalarEvolutionExpander.cpp
+index fee2a2d..ac7ffc7 100644
+--- a/lib/Analysis/ScalarEvolutionExpander.cpp
++++ b/lib/Analysis/ScalarEvolutionExpander.cpp
+@@ -201,6 +201,21 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
+   return BO;
+ }
+ 
++Value *SCEVExpander::InsertCast(Instruction::CastOps Op, Value *V,
++                                Type *DestTy) {
++  return Builder.CreateCast(Op, V, DestTy);
++}
++
++Value *SCEVExpander::InsertICmp(CmpInst::Predicate P, Value *LHS,
++                                Value *RHS) {
++  return Builder.CreateICmp(P, LHS, RHS);
++}
++
++Value *SCEVExpander::InsertSelect(Value *C, Value *True, Value *False,
++                                  const Twine &Name) {
++  return Builder.CreateSelect(C, True, False, Name);
++}
++
+ /// FactorOutConstant - Test if S is divisible by Factor, using signed
+ /// division. If so, update S with Factor divided out and return true.
+ /// S need not be evenly divisible if a reasonable remainder can be
+@@ -1633,16 +1648,16 @@ Value *SCEVExpander::expand(const SCEV *S) {
+     }
+ 
+   // Check to see if we already expanded this here.
+-  std::map<std::pair<const SCEV *, Instruction *>, TrackingVH<Value> >::iterator
+-    I = InsertedExpressions.find(std::make_pair(S, InsertPt));
+-  if (I != InsertedExpressions.end())
+-    return I->second;
++  Value *V = getSavedExpression(S, InsertPt);
++
++  if (V)
++    return V;
+ 
+   BuilderType::InsertPointGuard Guard(Builder);
+   Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
+ 
+   // Expand the expression into instructions.
+-  Value *V = visit(S);
++  V = visit(S);
+ 
+   // Remember the expanded value for this SCEV at this location.
+   //
+@@ -1650,10 +1665,23 @@ Value *SCEVExpander::expand(const SCEV *S) {
+   // the expression at this insertion point. If the mapped value happened to be
+   // a postinc expansion, it could be reused by a non-postinc user, but only if
+   // its insertion point was already at the head of the loop.
+-  InsertedExpressions[std::make_pair(S, InsertPt)] = V;
++  rememberExpression(S, InsertPt, V);
+   return V;
+ }
+ 
++Value* SCEVExpander::getSavedExpression(const SCEV *S, Instruction *InsertPt) {
++  std::map<std::pair<const SCEV *, Instruction *>, TrackingVH<Value> >::iterator
++    I = InsertedExpressions.find(std::make_pair(S, InsertPt));
++  if (I != InsertedExpressions.end())
++    return I->second;
++
++  return NULL;
++}
++
++void SCEVExpander::rememberExpression(const SCEV *S, Instruction *InsertPt, Value *V) {
++  InsertedExpressions[std::make_pair(S, InsertPt)] = V;
++}
++
+ void SCEVExpander::rememberInstruction(Value *I) {
+   if (!PostIncLoops.empty())
+     InsertedPostIncValues.insert(I);
