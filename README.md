@@ -38,7 +38,7 @@ The project is structured as a set of dynamically loaded libraries/passes for LL
 
 [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
 
-This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. this path can be find in ArrayInference/llvm-patch.diff
+This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be find in 'ArrayInference/llvm-patch.diff'.
 
 	MAKEFLAG="-j8"
   
@@ -62,6 +62,6 @@ After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands
  	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
  	make
 
-
+## Running a simple example
 
 
