@@ -9,6 +9,7 @@ In recent times, there has been an increasing interest in general-purpose comput
 This model, however, has its shortcomings. Historically, parallel programming has been a difficult paradigm to adopt, usually requiring that developers be familiarized with particular instruction sets of different graphics chips. Recently, a few standards such as OpenCL and CUDA have been designed to provide some level of abstraction to these platforms, which in turn has led to the development of several compiler directive-based models, e.g. OpenACC and offloading in OpenMP. While these have somewhat bridged the gap between programmers and parallel programming interfaces, they still rely on manual insertion of compiler directives in production code, an error-prone process that also commands in-depth knowledge of the target program. 
 
 Amongst the hurdles involved in annotating code, two tasks are particularly challenging: identifying parallel loops and estimating memory bounds. Regarding the former, opportunities for parallelism are usually buried in complex code, and rely on non-trivially verifiable information, such as the absence of pointer aliasing. As to the latter, languages such as C and C++ do not provide any information on the size of memory being accessed during the execution of the program. However, when offloading code for parallel execution, it is necessary to inform which chunks of memory must be copied to other devices. Therefore, the onus of keeping track of these bounds falls on the programmer.
+
 ### Implementation
 
 We have developed DawnCC as a tool to automate the performance of these tasks. Through the implementation of a static analysis that derives memory access bounds from source code, it infers the size of memory regions in C and C++ programs. With these bounds, it is capable of inserting data copy directives in the original source code. These directives provide a compatible compiler with information on which data must be moved between devices. Given the source code of a program as input, our tool can then provide the user with a modified version containing directives with proper memory bounds specified, all without any further intervention from the user, effectively freeing developers from the burdensome task of manual code modification. 
@@ -28,4 +29,8 @@ Compiler directive-oriented programming standards are some of the newest develop
 In order to use these standards to offload execution to accelerators, it is necessary to compile the modified source code with a compiler that supports the given directive standard (OpenMP 4.0 or OpenACC). In our internal testing environment, we use Portland Group's C Compiler for OpenACC support. You can find out more about it in the following link:
 
 [Portland Group](http://www.pgroup.com/index.htm)
+
+## Instalation
+
+
 
