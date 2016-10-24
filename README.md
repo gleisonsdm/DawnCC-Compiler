@@ -32,5 +32,29 @@ In order to use these standards to offload execution to accelerators, it is nece
 
 ## Instalation
 
+The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separate from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
+
+[LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz)
+
+[Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
+
+This project also requires some changes to be applied to LLVM itself. To do so,
+apply the patch "llvm-patch.diff" to your LLVM source directory.
+
+After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following
+commands can be used to build project Nike:
+
+  cd path-to-repository
+  REPO=`pwd`
+
+  # Build the code under ${REPO}/build-release, assumming an existing LLVM
+  # build under ${LLVM_BUILD_DIR}
+  mkdir ${REPO}/build-release
+  cd ${REPO}/build-release
+  cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
+  make
+
+The build mode (debug/release) will be the same as the LLVM build being linked.
+
 
 
