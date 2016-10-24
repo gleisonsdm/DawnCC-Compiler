@@ -86,8 +86,6 @@ The following script can be used to run DawnCC. Attention in the parts *< like t
  	export ST="$BUILD/ScopeTree/libLLVMScopeTree.so"
 
  	export XCL="-Xclang -load -Xclang"
-	
- 	export OMP=< openmp directory >
  	
 	export FLAGS="-mem2reg -tbaa -scoped-noalias -basicaa -functionattrs -gvn -loop-rotate
  	-instcombine -licm"
@@ -119,6 +117,13 @@ The following script can be used to run DawnCC. Attention in the parts *< like t
  	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
 
  	mv tmp.txt < Source Code >
+
+Below, a summary of each part where is necessary to change:
+
+- llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries.
+- DawnCC/build-debug : A reference to the location of the DawnCC binaries.
+- Source Code : The input file that will be used to run the analyzes.
+- op1 : 
 
 ## Running a simple example
 
