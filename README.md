@@ -42,7 +42,7 @@ This project also requires some changes to be applied to LLVM itself. To do so, 
 
 	MAKEFLAG="-j8"
   
- 	REPO=path-to-repository
+ 	REPO=< path-to-repository >
 
 	# Build a debug version of LLVM+Clang under ${REPO}/build-debug
 	mkdir ${REPO}/build-debug
@@ -53,7 +53,7 @@ This project also requires some changes to be applied to LLVM itself. To do so, 
 
 After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
 
- 	REPO=path-to-repository
+ 	REPO=< path-to-repository >
 
  	# Build the code under ${REPO}/build-release, assumming an existing LLVM
  	# build under ${LLVM_BUILD_DIR}
@@ -61,7 +61,66 @@ After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands
  	cd ${REPO}/build-debug
  	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
  	make
+	cd -
+
+## How to run a code
+
+The following script can be used to run DawnCC. Attention in the parts *< like this >*, is necessary to change them to use the code correctly. 
+
+ 	LLVM_PATH=< llvm-3.7-src/build-debug/bin >
+
+ 	export CLANG="$LLVM_PATH/clang"
+ 	export CLANGFORM="$LLVM_PATH/clang-format"
+ 	export OPT="$LLVM_PATH/opt"
+ 	export LINKER="$LLVM_PATH/llvm-link"
+ 	export DIS="$LLVM_PATH/llvm-dis"
+
+ 	export BUILD=< DawnCC/build-debug >
+
+ 	export PRA="$BUILD/PtrRangeAnalysis/libLLVMPtrRangeAnalysis.so"
+ 	export AI="$BUILD/AliasInstrumentation/libLLVMAliasInstrumentation.so"
+ 	export DPLA="$BUILD/DepBasedParallelLoopAnalysis/libParallelLoopAnalysis.so"
+ 	export CP="$BUILD/CanParallelize/libCanParallelize.so"
+ 	export PLM="$BUILD/ParallelLoopMetadata/libParallelLoopMetadata.so"
+ 	export WAI="$BUILD/ArrayInference/libLLVMArrayInference.so"
+ 	export ST="$BUILD/ScopeTree/libLLVMScopeTree.so"
+
+ 	export XCL="-Xclang -load -Xclang"
+	
+ 	export OMP=< openmp directory >
+ 	
+	export FLAGS="-mem2reg -tbaa -scoped-noalias -basicaa -functionattrs -gvn -loop-rotate
+ 	-instcombine -licm"
+ 	export FLAGSAI="-mem2reg -instnamer -loop-rotate"
+
+ 	export RES="result.bc"
+
+ 	rm result.bc result2.bc
+
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
+ 	mv tmp.txt < Source Code >
+
+ 	./scopetest.sh < Source Code >
+
+ 	$CLANG $OMP -g -S -emit-llvm < Source Code > -o result.bc 
+
+ 	#$OPT -load $ST -scopeTree result.bc 
+
+ 	$OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
+ 	  -scoped-noalias -alias-instrumentation -region-alias-checks \ 
+ 	  -can-parallelize -S result.bc
+
+ 	$OPT -load $ST -load $WAI -annotateParallel -S result.bc -o result2.bc
+
+ 	$OPT -S $FLAGSAI -load $ST -load $WAI -writeInFile -stats -Emit-GPU=< op1 > \
+ 	  -Emit-Parallel=< op2 > -Emit-OMP=< op3 > -Restrictifier=< op4 > \
+ 	  -Memory-Coalescing=< op5 > -Ptr-licm=< op6 > -Ptr-region=< op7 > result2.bc -o result3.bc
+
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
+
+ 	mv tmp.txt < Source Code >
 
 ## Running a simple example
+
 
 
