@@ -38,23 +38,30 @@ The project is structured as a set of dynamically loaded libraries/passes for LL
 
 [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
 
-This project also requires some changes to be applied to LLVM itself. To do so,
-apply the patch "llvm-patch.diff" to your LLVM source directory.
+This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory.
 
-After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following
-commands can be used to build project Nike:
+	MAKEFLAG="-j8"
+  
+ 	REPO=path-to-repository
 
-  cd path-to-repository
-  REPO=`pwd`
+	# Build a debug version of LLVM+Clang under ${REPO}/build-debug
+	mkdir ${REPO}/build-debug
+	cd ${REPO}/build-debug
+	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${REPO}/llvm-src/
+	make ${MAKEFLAG}
+	cd -
 
-  # Build the code under ${REPO}/build-release, assumming an existing LLVM
-  # build under ${LLVM_BUILD_DIR}
-  mkdir ${REPO}/build-release
-  cd ${REPO}/build-release
-  cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
-  make
+After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
 
-The build mode (debug/release) will be the same as the LLVM build being linked.
+ 	REPO=path-to-repository
+
+ 	# Build the code under ${REPO}/build-release, assumming an existing LLVM
+ 	# build under ${LLVM_BUILD_DIR}
+ 	mkdir ${REPO}/build-debug
+ 	cd ${REPO}/build-debug
+ 	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
+ 	make
+
 
 
 
