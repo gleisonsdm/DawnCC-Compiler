@@ -30,7 +30,7 @@ In order to use these standards to offload execution to accelerators, it is nece
 
 [Portland Group](http://www.pgroup.com/index.htm)
 
-## Instalation
+## Installation
 
 The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separate from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
 
