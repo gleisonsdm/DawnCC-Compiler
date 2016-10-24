@@ -120,34 +120,59 @@ The following script can be used to run DawnCC. Attention in the parts *< like t
 
 Below, a summary of each part where is necessary to change:
 
-- llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries.
-- DawnCC/build-debug : A reference to the location of the DawnCC binaries.
-- Source Code : The input file that will be used to run the analyzes.
+- llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries. 
+
+- DawnCC/build-debug : A reference to the location of the DawnCC binaries. 
+
+- Source Code : The input file that will be used to run the analyzes. 
+
 - op1 => boolean that decides if the tool will be analyze just the
-  functions starting with "GPU__" or all functions in the source file.
-    true : Analyze all functions.
-    false : Just Analyze the functions starting with "GPU__".
+  functions starting with "GPU__" or all functions in the source file. 
+  
+    true : Analyze all functions. 
+    
+    false : Just Analyze the functions starting with "GPU__". 
+    
 - op2 => boolean that decides if the tool will analyze and annotate
-  parallel loops.
-    true : Annotate loops as parallel, if possible.
-    false : Do not annotate loops as parallel.
-- op3 => Generates all pragmas in OpenMP.
-    2 : Annotate pragmas with OpenMP directives (CPU standard format).
-    1 : Annotate pragmas with OpenMP directives (GPU standard format).
-    0 : Annotate with default pragmas (OpenACC).
-- op4 => Write tests to desambiguate pointers.
-    true : Annotate tests.
-    false : Do not annotate tests.
-- op5 => Try to do memory coalescing to avoid data transference.
-    true : Try to use regions to do the coalescing.
-    false : Do not use memory coalesing.
-- op6 => Try to use loop invariant code motion, to avoid alias impact.
-    true : Uses licm in Pointer Range Analysis, case necessary.
-    false : Do not use Pointer Range Analysis licm.
+  parallel loops. 
+  
+    true : Annotate loops as parallel, if possible. 
+    
+    false : Do not annotate loops as parallel. 
+    
+- op3 => Generates all pragmas in OpenMP. 
+
+    2 : Annotate pragmas with OpenMP directives (CPU standard format). 
+    
+    1 : Annotate pragmas with OpenMP directives (GPU standard format). 
+    
+    0 : Annotate with default pragmas (OpenACC). 
+    
+- op4 => Write tests to desambiguate pointers. 
+
+    true : Annotate tests. 
+    
+    false : Do not annotate tests. 
+    
+- op5 => Try to do memory coalescing to avoid data transference. 
+
+    true : Try to use regions to do the coalescing. 
+    
+    false : Do not use memory coalesing. 
+    
+- op6 => Try to use loop invariant code motion, to avoid alias impact. 
+
+    true : Uses licm in Pointer Range Analysis, case necessary. 
+    
+    false : Do not use Pointer Range Analysis licm. 
+    
 - op7 => Try to rewrite regions, and analyze a new region define with
-  an analysis.
-    true : Try rewrite regions.
-    false : Use just the regions available in the IR.
+  an analysis. 
+  
+    true : Try rewrite regions. 
+    
+    false : Use just the regions available in the IR. 
+    
 
 ## Running a simple example
 
