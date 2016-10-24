@@ -172,9 +172,8 @@ Below, a summary of each part where is necessary to change:
     true : Try rewrite regions. 
     
     false : Use just the regions available in the IR. 
-    
 
-## Running a simple example
+
 
 
 
