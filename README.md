@@ -65,7 +65,7 @@ After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands
 
 ## How to run a code
 
-The following script can be used to run DawnCC. Attention in the parts *< like this >*, is necessary to change them to use the code correctly. 
+To run DawnCC, copy and paste the text below into a script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
 
  	LLVM_PATH=< llvm-3.7-src/build-debug/bin >
 
@@ -118,15 +118,15 @@ The following script can be used to run DawnCC. Attention in the parts *< like t
 
  	mv tmp.txt < Source Code >
 
-Below, a summary of each part where is necessary to change:
+Below, a summary of each part where it is necessary to change text:
 
 - llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries. 
 
 - DawnCC/build-debug : A reference to the location of the DawnCC binaries. 
 
-- Source Code : The input file that will be used to run the analyzes. 
+- Source Code : The input file that will be used to run the analyses. 
 
-- op1 => boolean that decides if the tool will be analyze just the
+- op1 => boolean that decides if the tool will analyze just the
   functions starting with "GPU__" or all functions in the source file. 
   
     true : Analyze all functions. 
@@ -148,7 +148,7 @@ Below, a summary of each part where is necessary to change:
     
     0 : Annotate with default pragmas (OpenACC). 
     
-- op4 => Write tests to desambiguate pointers. 
+- op4 => Write tests to disambiguate pointers. 
 
     true : Annotate tests. 
     
@@ -158,18 +158,17 @@ Below, a summary of each part where is necessary to change:
 
     true : Try to use regions to do the coalescing. 
     
-    false : Do not use memory coalesing. 
+    false : Do not use memory coalescing. 
     
 - op6 => Try to use loop invariant code motion, to avoid alias impact. 
 
     true : Uses licm in Pointer Range Analysis, case necessary. 
     
-    false : Do not use Pointer Range Analysis licm. 
+    false : Do not use Pointer Range Analysis with licm. 
     
-- op7 => Try to rewrite regions, and analyze a new region define with
-  an analysis. 
+- op7 => Try to rebuild regions, and analyze each new region defined. 
   
-    true : Try rewrite regions. 
+    true : Try to rewrite regions. 
     
     false : Use just the regions available in the IR. 
 
