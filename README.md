@@ -40,12 +40,14 @@ The project is structured as a set of dynamically loaded libraries/passes for LL
 
 This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be found in 'ArrayInference/llvm-patch.diff'.
 
+After applying the diff, we can move on to compiling a fresh LLVM+Clang 3.7 build. To do so, you can follow these outlines:
+
 	MAKEFLAG="-j8"
   
  	LLVM_SRC=<path-to-llvm-source-folder>
 	REPO=<path-to-dawncc-repository>
 
-	#Build a debug version of LLVM+Clang under ${LLVM_SRC}/../llvm-build
+	#We will build a debug version of LLVM+Clang under ${LLVM_SRC}/../llvm-build
 	mkdir ${LLVM_SRC}/../llvm-build
 	cd ${LLVM_SRC}/../llvm-build
 
