@@ -32,28 +32,36 @@ In order to use these standards to offload execution to accelerators, it is nece
 
 ## Installation
 
-The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separate from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
+The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separately from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
 
 [LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz)
 
 [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
 
-This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be find in 'ArrayInference/llvm-patch.diff'.
+This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be found in 'ArrayInference/llvm-patch.diff'.
 
 	MAKEFLAG="-j8"
   
- 	REPO=< path-to-repository >
+ 	LLVM_SRC=<path-to-llvm-source-folder>
+	REPO=<path-to-dawncc-repository>
 
-	# Build a debug version of LLVM+Clang under ${REPO}/build-debug
-	mkdir ${REPO}/build-debug
-	cd ${REPO}/build-debug
+	#Build a debug version of LLVM+Clang under ${REPO}/build-debug
+	mkdir ${LLVM_SRC}/../llvm-build
+	cd ${LLVM_SRC}/../llvm-build
+
+	#Setup clang plugins to be compiled alongside LLVM and Clang
+	${REPO}/src/ScopeFinder/setup.sh
+
+	#Create build setup for LLVM+Clang using CMake
 	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${REPO}/llvm-src/
+	
+	#Compile LLVM+Clang (this will likely take a while)
 	make ${MAKEFLAG}
 	cd -
 
 After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
-
- 	REPO=< path-to-repository >
+ 	
+	REPO=<path-to-repository>
 
  	# Build the code under ${REPO}/build-release, assumming an existing LLVM
  	# build under ${LLVM_BUILD_DIR}
