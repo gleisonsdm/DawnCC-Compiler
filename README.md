@@ -45,7 +45,7 @@ This project also requires some changes to be applied to LLVM itself. To do so, 
  	LLVM_SRC=<path-to-llvm-source-folder>
 	REPO=<path-to-dawncc-repository>
 
-	#Build a debug version of LLVM+Clang under ${REPO}/build-debug
+	#Build a debug version of LLVM+Clang under ${LLVM_SRC}/../llvm-build
 	mkdir ${LLVM_SRC}/../llvm-build
 	cd ${LLVM_SRC}/../llvm-build
 
@@ -53,7 +53,7 @@ This project also requires some changes to be applied to LLVM itself. To do so, 
 	${REPO}/src/ScopeFinder/setup.sh
 
 	#Create build setup for LLVM+Clang using CMake
-	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${REPO}/llvm-src/
+	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
 	
 	#Compile LLVM+Clang (this will likely take a while)
 	make ${MAKEFLAG}
@@ -63,17 +63,17 @@ After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands
  	
 	REPO=<path-to-repository>
 
- 	# Build the code under ${REPO}/build-release, assumming an existing LLVM
+ 	# Build the shared libraries under ${REPO}/lib, assumming an existing LLVM
  	# build under ${LLVM_BUILD_DIR}
- 	mkdir ${REPO}/build-debug
- 	cd ${REPO}/build-debug
+ 	mkdir ${REPO}/lib
+ 	cd ${REPO}/lib
  	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
  	make
 	cd -
 
 ## How to run a code
 
-To run DawnCC, copy and paste the text below into a script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
+To run DawnCC, copy and paste the text below into a shell script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
 
  	LLVM_PATH=< llvm-3.7-src/build-debug/bin >
 
