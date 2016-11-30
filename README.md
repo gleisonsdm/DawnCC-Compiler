@@ -60,7 +60,8 @@ This project also requires some changes to be applied to LLVM itself. To do so, 
 	cd -
 
 After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
- 	
+
+	LLVM_BUILD_DIR=<path-to-llvm-build-folder> 	
 	REPO=<path-to-repository>
 
  	# Build the shared libraries under ${REPO}/lib, assumming an existing LLVM
@@ -75,7 +76,7 @@ After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands
 
 To run DawnCC, copy and paste the text below into a shell script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
 
- 	LLVM_PATH=< llvm-3.7-src/build-debug/bin >
+ 	LLVM_PATH=<path-to-llvm-build-bin-folder>
 
  	export CLANG="$LLVM_PATH/clang"
  	export CLANGFORM="$LLVM_PATH/clang-format"
@@ -83,7 +84,9 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	export LINKER="$LLVM_PATH/llvm-link"
  	export DIS="$LLVM_PATH/llvm-dis"
 
- 	export BUILD=< DawnCC/build-debug >
+	export SCOPEFIND="$LLVM_PATH/../lib/scope-finder.so"
+
+ 	export BUILD=< DawnCC/lib >
 
  	export PRA="$BUILD/PtrRangeAnalysis/libLLVMPtrRangeAnalysis.so"
  	export AI="$BUILD/AliasInstrumentation/libLLVMAliasInstrumentation.so"
@@ -93,8 +96,6 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	export WAI="$BUILD/ArrayInference/libLLVMArrayInference.so"
  	export ST="$BUILD/ScopeTree/libLLVMScopeTree.so"
 
- 	export XCL="-Xclang -load -Xclang"
- 	
 	export FLAGS="-mem2reg -tbaa -scoped-noalias -basicaa -functionattrs -gvn -loop-rotate
  	-instcombine -licm"
  	export FLAGSAI="-mem2reg -instnamer -loop-rotate"
@@ -103,14 +104,11 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
 
  	rm result.bc result2.bc
 
- 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
- 	mv tmp.txt < Source Code >
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code File(s) (.c/.cc/.cpp)>
 
- 	./scopetest.sh < Source Code >
+ 	$CLANG -Xclang -load $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only < Source Code File(s) (.c/.cc/.cpp)>
 
  	$CLANG $OMP -g -S -emit-llvm < Source Code > -o result.bc 
-
- 	#$OPT -load $ST -scopeTree result.bc 
 
  	$OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
  	  -scoped-noalias -alias-instrumentation -region-alias-checks \ 
@@ -122,15 +120,13 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	  -Emit-Parallel=< op2 > -Emit-OMP=< op3 > -Restrictifier=< op4 > \
  	  -Memory-Coalescing=< op5 > -Ptr-licm=< op6 > -Ptr-region=< op7 > result2.bc -o result3.bc
 
- 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
-
- 	mv tmp.txt < Source Code >
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code Files (.c/.cc/.cpp) >
 
 Below, a summary of each part where it is necessary to change text:
 
-- llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries. 
+- path-to-llvm-build-bin-folder : A reference to the location of the llvm-3.7 binaries. 
 
-- DawnCC/build-debug : A reference to the location of the DawnCC binaries. 
+- DawnCC/lib : A reference to the location of the DawnCC libraries (.so files). 
 
 - Source Code : The input file that will be used to run the analyses. 
 
