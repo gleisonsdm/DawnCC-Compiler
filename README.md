@@ -38,7 +38,7 @@ The project is structured as a set of dynamically loaded libraries/passes for LL
 
 [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
 
-This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be found in 'ArrayInference/llvm-patch.diff'.
+This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This patch can be found in 'ArrayInference/llvm-patch.diff'.
 
 After applying the diff, we can move on to compiling a fresh LLVM+Clang 3.7 build. To do so, you can follow these outlines:
 
