@@ -83,8 +83,6 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	export CLANG="$LLVM_PATH/clang"
  	export CLANGFORM="$LLVM_PATH/clang-format"
  	export OPT="$LLVM_PATH/opt"
- 	export LINKER="$LLVM_PATH/llvm-link"
- 	export DIS="$LLVM_PATH/llvm-dis"
 
 	export SCOPEFIND="$LLVM_PATH/../lib/scope-finder.so"
 
@@ -94,7 +92,6 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	export AI="$BUILD/AliasInstrumentation/libLLVMAliasInstrumentation.so"
  	export DPLA="$BUILD/DepBasedParallelLoopAnalysis/libParallelLoopAnalysis.so"
  	export CP="$BUILD/CanParallelize/libCanParallelize.so"
- 	export PLM="$BUILD/ParallelLoopMetadata/libParallelLoopMetadata.so"
  	export WAI="$BUILD/ArrayInference/libLLVMArrayInference.so"
  	export ST="$BUILD/ScopeTree/libLLVMScopeTree.so"
 
@@ -102,15 +99,13 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	-instcombine -licm"
  	export FLAGSAI="-mem2reg -instnamer -loop-rotate"
 
- 	export RES="result.bc"
-
  	rm result.bc result2.bc
 
  	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code File(s) (.c/.cc/.cpp)>
 
- 	$CLANG -Xclang -load $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only < Source Code File(s) (.c/.cc/.cpp)>
+ 	$CLANG -Xclang -load -Xclang $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only < Source Code File(s) (.c/.cc/.cpp)>
 
- 	$CLANG $OMP -g -S -emit-llvm < Source Code > -o result.bc 
+ 	$CLANG -g -S -emit-llvm < Source Code > -o result.bc 
 
  	$OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
  	  -scoped-noalias -alias-instrumentation -region-alias-checks \ 
@@ -132,12 +127,12 @@ Below, a summary of each part where it is necessary to change text:
 
 - Source Code : The input file that will be used to run the analyses. 
 
-- op1 => boolean that decides if the tool will analyze just the
+- op1 => boolean that decides if the tool will analyze only the
   functions starting with "GPU__" or all functions in the source file. 
   
-    true : Analyze all functions. 
+    true : Analyze only functions whose name begins with the "GPU__" prefix. 
     
-    false : Just Analyze the functions starting with "GPU__". 
+    false : Analyze all functions.
     
 - op2 => boolean that decides if the tool will analyze and annotate
   parallel loops. 
@@ -146,7 +141,7 @@ Below, a summary of each part where it is necessary to change text:
     
     false : Do not annotate loops as parallel. 
     
-- op3 => Generates all pragmas in OpenMP. 
+- op3 => Determines which annotation standard to use.
 
     2 : Annotate pragmas with OpenMP directives (CPU standard format). 
     
@@ -154,29 +149,29 @@ Below, a summary of each part where it is necessary to change text:
     
     0 : Annotate with default pragmas (OpenACC). 
     
-- op4 => Write tests to disambiguate pointers. 
+- op4 => Determines if the tool should insert pointer disambiguation checks.
 
     true : Annotate tests. 
     
     false : Do not annotate tests. 
     
-- op5 => Try to do memory coalescing to avoid data transference. 
+- op5 => Attempt to coalesce redundant memory copy directives. 
 
     true : Try to use regions to do the coalescing. 
     
     false : Do not use memory coalescing. 
     
-- op6 => Try to use loop invariant code motion, to avoid alias impact. 
+- op6 => Try to use loop invariant code motion, to minimize aliasing. 
 
-    true : Uses licm in Pointer Range Analysis, case necessary. 
+    true : Uses licm in Pointer Range Analysis. 
     
     false : Do not use Pointer Range Analysis with licm. 
     
-- op7 => Try to rebuild regions, and analyze each new region defined. 
+- op7 => Attempt to reconstruct program regions, to find more coalescing opportunities.. 
   
     true : Try to rewrite regions. 
     
-    false : Use just the regions available in the IR. 
+    false : Use only the regions available in LLVM IR. 
 
 
 
