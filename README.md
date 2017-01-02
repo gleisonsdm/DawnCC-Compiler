@@ -32,77 +32,80 @@ In order to use these standards to offload execution to accelerators, it is nece
 
 ## Installation
 
-The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separate from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
+The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separately from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
 
 [LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz)
 
 [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz)
 
-This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This path can be find in 'ArrayInference/llvm-patch.diff'.
+This project also requires some changes to be applied to LLVM itself. To do so, apply the patch "llvm-patch.diff" to your LLVM source directory. This patch can be found in 'ArrayInference/llvm-patch.diff'.
+
+After applying the diff, we can move on to compiling a fresh LLVM+Clang 3.7 build. To do so, you can follow these outlines:
 
 	MAKEFLAG="-j8"
   
- 	REPO=< path-to-repository >
+ 	LLVM_SRC=<path-to-llvm-source-folder>
+	REPO=<path-to-dawncc-repository>
 
-	# Build a debug version of LLVM+Clang under ${REPO}/build-debug
-	mkdir ${REPO}/build-debug
-	cd ${REPO}/build-debug
-	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${REPO}/llvm-src/
+	#We will build a debug version of LLVM+Clang under ${LLVM_SRC}/../llvm-build
+	mkdir ${LLVM_SRC}/../llvm-build
+	cd ${LLVM_SRC}/../llvm-build
+
+	#Setup clang plugins to be compiled alongside LLVM and Clang
+	${REPO}/src/ScopeFinder/setup.sh
+
+	#Create build setup for LLVM+Clang using CMake
+	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
+	
+	#Compile LLVM+Clang (this will likely take a while)
 	make ${MAKEFLAG}
 	cd -
 
 After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
 
- 	REPO=< path-to-repository >
+	LLVM_BUILD_DIR=<path-to-llvm-build-folder> 	
+	REPO=<path-to-repository>
 
- 	# Build the code under ${REPO}/build-release, assumming an existing LLVM
+ 	# Build the shared libraries under ${REPO}/lib, assumming an existing LLVM
  	# build under ${LLVM_BUILD_DIR}
- 	mkdir ${REPO}/build-debug
- 	cd ${REPO}/build-debug
+ 	mkdir ${REPO}/lib
+ 	cd ${REPO}/lib
  	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
  	make
 	cd -
 
 ## How to run a code
 
-To run DawnCC, copy and paste the text below into a script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
+To run DawnCC, copy and paste the text below into a shell script file. You will have to change text between pointy brackets, e.g., *< like this >* to adapt the script to your environment.
 
- 	LLVM_PATH=< llvm-3.7-src/build-debug/bin >
+ 	LLVM_PATH=<path-to-llvm-build-bin-folder>
 
  	export CLANG="$LLVM_PATH/clang"
  	export CLANGFORM="$LLVM_PATH/clang-format"
  	export OPT="$LLVM_PATH/opt"
- 	export LINKER="$LLVM_PATH/llvm-link"
- 	export DIS="$LLVM_PATH/llvm-dis"
 
- 	export BUILD=< DawnCC/build-debug >
+	export SCOPEFIND="$LLVM_PATH/../lib/scope-finder.so"
+
+ 	export BUILD=< DawnCC/lib >
 
  	export PRA="$BUILD/PtrRangeAnalysis/libLLVMPtrRangeAnalysis.so"
  	export AI="$BUILD/AliasInstrumentation/libLLVMAliasInstrumentation.so"
  	export DPLA="$BUILD/DepBasedParallelLoopAnalysis/libParallelLoopAnalysis.so"
  	export CP="$BUILD/CanParallelize/libCanParallelize.so"
- 	export PLM="$BUILD/ParallelLoopMetadata/libParallelLoopMetadata.so"
  	export WAI="$BUILD/ArrayInference/libLLVMArrayInference.so"
  	export ST="$BUILD/ScopeTree/libLLVMScopeTree.so"
 
- 	export XCL="-Xclang -load -Xclang"
- 	
 	export FLAGS="-mem2reg -tbaa -scoped-noalias -basicaa -functionattrs -gvn -loop-rotate
  	-instcombine -licm"
  	export FLAGSAI="-mem2reg -instnamer -loop-rotate"
 
- 	export RES="result.bc"
-
  	rm result.bc result2.bc
 
- 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
- 	mv tmp.txt < Source Code >
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code File(s) (.c/.cc/.cpp)>
 
- 	./scopetest.sh < Source Code >
+ 	$CLANG -Xclang -load -Xclang $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only < Source Code File(s) (.c/.cc/.cpp)>
 
- 	$CLANG $OMP -g -S -emit-llvm < Source Code > -o result.bc 
-
- 	#$OPT -load $ST -scopeTree result.bc 
+ 	$CLANG -g -S -emit-llvm < Source Code > -o result.bc 
 
  	$OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
  	  -scoped-noalias -alias-instrumentation -region-alias-checks \ 
@@ -114,24 +117,22 @@ To run DawnCC, copy and paste the text below into a script file. You will have t
  	  -Emit-Parallel=< op2 > -Emit-OMP=< op3 > -Restrictifier=< op4 > \
  	  -Memory-Coalescing=< op5 > -Ptr-licm=< op6 > -Ptr-region=< op7 > result2.bc -o result3.bc
 
- 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" < Source Code > &> tmp.txt
-
- 	mv tmp.txt < Source Code >
+ 	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code Files (.c/.cc/.cpp) >
 
 Below, a summary of each part where it is necessary to change text:
 
-- llvm-3.7-src/build-debug/bin : A reference to the location of the llvm-3.7 binaries. 
+- path-to-llvm-build-bin-folder : A reference to the location of the llvm-3.7 binaries. 
 
-- DawnCC/build-debug : A reference to the location of the DawnCC binaries. 
+- DawnCC/lib : A reference to the location of the DawnCC libraries (.so files). 
 
 - Source Code : The input file that will be used to run the analyses. 
 
-- op1 => boolean that decides if the tool will analyze just the
+- op1 => boolean that decides if the tool will analyze only the
   functions starting with "GPU__" or all functions in the source file. 
   
-    true : Analyze all functions. 
+    true : Analyze only functions whose name begins with the "GPU__" prefix. 
     
-    false : Just Analyze the functions starting with "GPU__". 
+    false : Analyze all functions.
     
 - op2 => boolean that decides if the tool will analyze and annotate
   parallel loops. 
@@ -140,7 +141,7 @@ Below, a summary of each part where it is necessary to change text:
     
     false : Do not annotate loops as parallel. 
     
-- op3 => Generates all pragmas in OpenMP. 
+- op3 => Determines which annotation standard to use.
 
     2 : Annotate pragmas with OpenMP directives (CPU standard format). 
     
@@ -148,29 +149,29 @@ Below, a summary of each part where it is necessary to change text:
     
     0 : Annotate with default pragmas (OpenACC). 
     
-- op4 => Write tests to disambiguate pointers. 
+- op4 => Determines if the tool should insert pointer disambiguation checks.
 
     true : Annotate tests. 
     
     false : Do not annotate tests. 
     
-- op5 => Try to do memory coalescing to avoid data transference. 
+- op5 => Attempt to coalesce redundant memory copy directives. 
 
     true : Try to use regions to do the coalescing. 
     
     false : Do not use memory coalescing. 
     
-- op6 => Try to use loop invariant code motion, to avoid alias impact. 
+- op6 => Try to use loop invariant code motion, to minimize aliasing. 
 
-    true : Uses licm in Pointer Range Analysis, case necessary. 
+    true : Uses licm in Pointer Range Analysis. 
     
     false : Do not use Pointer Range Analysis with licm. 
     
-- op7 => Try to rebuild regions, and analyze each new region defined. 
+- op7 => Attempt to reconstruct program regions, to find more coalescing opportunities.. 
   
     true : Try to rewrite regions. 
     
-    false : Use just the regions available in the IR. 
+    false : Use only the regions available in LLVM IR. 
 
 
 
