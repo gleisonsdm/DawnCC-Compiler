@@ -150,6 +150,13 @@ double ConstantsSimplify::getConstantDataVector (
   return 0.0;
 }
 
+double ConstantsSimplify::getConstantVector (
+       const ConstantVector *C) {
+  // Not works with this instruciton. 
+  setValidFalse();
+  return 0.0;
+}
+
 double ConstantsSimplify::getConstantFP (const ConstantFP *C) const {
   return C->getValueAPF().convertToDouble();
 }
