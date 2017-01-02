@@ -113,7 +113,7 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
 
  	$OPT -load $ST -load $WAI -annotateParallel -S result.bc -o result2.bc
 
- 	$OPT -S $FLAGSAI -load $ST -load $WAI -writeInFile -stats -Run-Mode=true -Emit-GPU=< op1 > \
+ 	$OPT -S $FLAGSAI -load $ST -load $WAI -writeInFile -stats -Emit-GPU=< op1 > \
  	  -Emit-Parallel=< op2 > -Emit-OMP=< op3 > -Restrictifier=< op4 > \
  	  -Memory-Coalescing=< op5 > -Ptr-licm=< op6 > -Ptr-region=< op7 > result2.bc -o result3.bc
 
