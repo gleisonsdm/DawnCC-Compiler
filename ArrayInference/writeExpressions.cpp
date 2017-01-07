@@ -274,16 +274,7 @@ void WriteExpressions::regionIdentify (Region *R) {
   marknumAL(l);
 
   int line = l->getStartLoc().getLine();
-  for (auto LI = l->block_begin(), LE = l->block_end(); LI != LE; LI++)
-    for (auto II = (*LI)->begin(), IE = (*LI)->end(); II != IE; II++) {
-      if (!II->getDebugLoc())
-        continue;
-      int tmpLine = II->getDebugLoc()->getLine();
-      if (tmpLine != ERROR_VALUE)
-        errs() << "Line => " << tmpLine << "\n"; 
-  }
-  l->dump();
-  errs() << "At line : " << line << "\n\n";
+
   if (line == ERROR_VALUE)
     return;
   
