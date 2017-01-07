@@ -68,7 +68,7 @@ class ConstantsSimplify {
   double getConstantInt (const ConstantInt *C) const;
   double getConstantPointerNull (ConstantPointerNull *C, const DataLayout *DT);
   double getConstantStruct (const ConstantStruct *C);
-  double getConstantVector (const ConstantVector *C) const;
+  double getConstantVector (const ConstantVector *C);
   
   // Return the result of Compare Instruction if it's a constant expression.
   bool getConstantCmp (Constant *CI, const DataLayout *DT);
