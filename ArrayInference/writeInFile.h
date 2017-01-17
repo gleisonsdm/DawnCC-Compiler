@@ -42,6 +42,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 
 #include "writeExpressions.h"
+#include "recoverExpressions.h"
 
 using namespace lge;
 
@@ -118,12 +119,16 @@ class WriteInFile : public ModulePass {
   virtual bool runOnModule(Module &M);
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<WriteExpressions>();  
+    AU.addRequired<WriteExpressions>();
+    AU.addRequired<RecoverExpressions>();
     AU.setPreservesAll();
   }
   
   // Pass that will insert comments in source file.
   WriteExpressions *we;
+
+  // Insert tasks into the source file.
+  RecoverExpressions *re;
   
 };
 

@@ -128,9 +128,11 @@ void Restrictifier::identifyOffsets (std::string str) {
 }
 
 void Restrictifier::getBounds (std::map<std::string, std::string> & lowerB,
-                               std::map<std::string, std::string> & upperB) {
+                               std::map<std::string, std::string> & upperB,
+                               std::map<std::string, Value*> pointersB) {
   for (auto I = lowerB.begin(), IE = lowerB.end(); I != IE; I++) {
     limits[I->first] = std::make_pair(I->second, upperB[I->first]);
+    pointers[I->first] = pointersB[I->first];
   }
 }
 

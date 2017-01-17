@@ -37,8 +37,11 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/LoopInfo.h"
 
+#ifndef myutils
+#define myutils
 #include "recoverCode.h"
 #include "../ScopeTree/ScopeTree.h"
+#endif
 
 using namespace lge;
 
@@ -113,10 +116,10 @@ class WriteExpressions : public FunctionPass {
   void regionIdentify(Region *R);
  
   // Annotate pragma 'Kernels' in the region R
-  bool annotateAccKernels (Region *R, std::string NAME);
+  bool annotateAccKernels (Region *R, std::string NAME, bool restric);
 
   // write the pragma 'Kernels' in association with loop L
-    void writeKernels (Loop *L, std::string NAME);
+    void writeKernels (Loop *L, std::string NAME, bool restric);
 
   // Identify the region case it is safe to do memory coalescing.
   bool isSafeMemoryCoalescing (Region *R);

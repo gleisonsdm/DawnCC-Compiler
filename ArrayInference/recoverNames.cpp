@@ -389,8 +389,10 @@ RecoverNames::VarNames RecoverNames::getNameofValue(Value *V) {
 
 
     if (!isa<AllocaInst>(I) && !isa<LoadInst>(I) && !isa<StoreInst>(I) &&
-        !isa<GetElementPtrInst>(I) && !isa<GlobalValue>(I))
+        !isa<GetElementPtrInst>(I) && !isa<GlobalValue>(I)) {
+      var.nameInFile = getOriginalName(V);
       return var;
+    }
 
     BasicBlock *bb = I->getParent();
     Function *F = bb->getParent();
@@ -426,7 +428,7 @@ RecoverNames::VarNames RecoverNames::getNameofValue(Value *V) {
     }
 
     // Return if the based pointer of instruction is a global variable.
-    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+    if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
       for (unsigned int i = 0, e = listGlobalVars.size(); i < e; i++)
         if (I->getOperand(0)->getName() == listGlobalVars[i].name) {
           var.nameInFile = listGlobalVars[i].name;
@@ -435,7 +437,9 @@ RecoverNames::VarNames RecoverNames::getNameofValue(Value *V) {
           var.isGlobal = true;
           break;
         }
+    }
   }
+ 
   return var;
 }
 

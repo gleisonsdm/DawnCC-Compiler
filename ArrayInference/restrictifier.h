@@ -32,6 +32,8 @@ class Restrictifier {
   //                              Data Structs
   //===---------------------------------------------------------------------===
     std::map<std::string, std::pair<std::string,std::string> > limits;
+
+    std::map<std::string, Value*> pointers;
   
     std::string NAME;
   
@@ -71,7 +73,8 @@ class Restrictifier {
 
   // Identify bounds for pointers.
   void getBounds (std::map<std::string, std::string> & lowerB,
-                  std::map<std::string, std::string> & upperB);
+                  std::map<std::string, std::string> & upperB,
+                  std::map<std::string, Value*> pointersB);
 
   // Return true case resul of restrictifier is true, else in other case.
   bool isValid ();

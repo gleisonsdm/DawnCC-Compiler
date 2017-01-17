@@ -201,8 +201,14 @@ bool ScopeTree::readFile (std::string name, Function *F) {
 
       std::getline(Infile, Line);
       std::getline(Infile, Line);
+      gph.n_nodes = 0;
       // Starts to build a graph.
-      gph.n_nodes = gph.list.size();
+      for (auto I = gph.list.begin(), IE = gph.list.end(); I != IE; I++) {
+        if (gph.n_nodes < I->second.id)
+          gph.n_nodes = I->second.id;
+      }
+
+      gph.n_nodes++;
       std::vector<unsigned int> vct;
       // Generates a vector for vertex edge in the graph.
       for (unsigned int i = 0, ie = gph.n_nodes; i != ie; i++)
@@ -212,7 +218,7 @@ bool ScopeTree::readFile (std::string name, Function *F) {
         std::pair<unsigned int, unsigned int> edge;
         edge = buildEdge(Line);
         insertEdge (&gph, edge.first, edge.second);
-        std::getline(Infile, Line); 
+        std::getline(Infile, Line);
       } while (Line != "");
       
       Module *M = F->getParent();
@@ -230,17 +236,22 @@ bool ScopeTree::readFile (std::string name, Function *F) {
 }
 
 void ScopeTree::identifyParents (Graph *gph) {
-  unsigned int id;
+  unsigned int id = INT_MAX;
+
+  for (auto I = gph->list.begin(), IE = gph->list.end(); I != IE; I++) {
+    if (I->second.id < id)
+      id = I->second.id;
+  }
+
   for (auto I = gph->list.begin(), IE = gph->list.end(); I != IE; I++) {
     if (I->second.isTopLevel) {
       id = I->second.id;
       break;
     }
   }
-  
+
   std::queue<unsigned int> toIterate;
   std::vector<bool> nodeFound(gph->n_nodes, false);
-
   toIterate.push(id);
   nodeFound[id] = true;
 
@@ -257,6 +268,13 @@ void ScopeTree::identifyParents (Graph *gph) {
   }
 }
 
+bool ScopeTree::isValidLoopStatement (STnode node, int line, int column) {
+  return ((node.startLine == line) && (node.startColumn == column) &&
+          ((node.name.find("WhileStmt") != string::npos) ||
+           (node.name.find("DoStmt") != string::npos) ||
+           (node.name.find("ForStmt") != string::npos)));
+}
+
 void ScopeTree::associateLoop (Loop *L) {
   unsigned int line = L->getStartLoc()->getLine();
   unsigned int column = L->getStartLoc()->getColumn();
@@ -266,13 +284,24 @@ void ScopeTree::associateLoop (Loop *L) {
     return;
 
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++)
-    for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++)
-      if ((J->second.startLine == line) && 
-          (J->second.startColumn == column)) {
+    for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++) {
+      if (isValidLoopStatement(J->second, line, column)) {
         J->second.isLoop = true;
         loopNodes[L] = J->second;
         return;
-      }   
+      }
+      MDNode* MD = L->getHeader()->getTerminator()->getMetadata("dbg");
+      if (!MD)
+        continue;
+      if (DILocation *DL = dyn_cast<DILocation>(MD))
+        column = DL->getColumn();
+      if (isValidLoopStatement(J->second, line, column)) {
+        J->second.isLoop = true;
+        loopNodes[L] = J->second;
+        return;
+      }
+      column = L->getStartLoc()->getColumn();
+    }
 }
 
 void ScopeTree::associateFunction (Function *F) {
@@ -281,11 +310,12 @@ void ScopeTree::associateFunction (Function *F) {
     return;
 
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++)
-    for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++)
+    for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++) {
       if (F->getName() == J->second.name) {
         funcNodes[F] = J->second;
         return;
       }
+    }
 }
 
 void ScopeTree::associateIRSource (Function *F) {
@@ -408,8 +438,9 @@ bool ScopeTree::isSafetlyRegionLoops (Region *R) {
   Module *M = F->getParent();
   
   // Find the Top region node to start the search, and the respective graph.
-  if (!funcNodes.count(F))
+  if (!funcNodes.count(F)) {
     return false;
+  }
   STnode node = funcNodes[F];
   Graph gph = findGraph(R);
 
@@ -505,11 +536,11 @@ bool ScopeTree::runOnFunction(Function &F) {
   this->dt = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   std::string fName = getFileName(F.begin()->getTerminator());
-  if ((fName != std::string()) && (!isFileRead)) {
-    isFileRead = readFile(fName, &F);
+  if ((fName != std::string()) && !isFileRead.count(fName)) {
+    isFileRead[fName] = readFile(fName, &F);
   }
   
-  if (isFileRead)
+  if (isFileRead[fName])
     associateIRSource(&F);
   
   return true;

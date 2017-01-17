@@ -13,5 +13,6 @@ add_library(LLVMArrayInference MODULE
   SCEVRangeBuilder.cpp  
   annotateLoopParallel.cpp
   regionReconstructor.cpp
+  recoverExpressions.cpp
 )
 

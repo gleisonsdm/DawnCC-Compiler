@@ -40,7 +40,7 @@ Value *SCEVRangeBuilder::expand(const SCEV *S, bool Upper) {
     rememberExpression(S, InsertPt, Upper, V);
 
   CurrentUpper = OldUpper;
-  
+
   return V;
 }
 
@@ -142,7 +142,6 @@ Value *SCEVRangeBuilder::visitMulExpr(const SCEVMulExpr *Expr, bool Upper) {
   if (Expr->getNumOperands() != 2) {
     return nullptr;
   }
-
   // If there is a constant, it will be the first operand.
   const SCEVConstant *SC1 = dyn_cast<SCEVConstant>(Expr->getOperand(0));
   const SCEVConstant *SC2 = dyn_cast<SCEVConstant>(Expr->getOperand(1));
@@ -187,10 +186,13 @@ Value *SCEVRangeBuilder::visitMulExpr(const SCEVMulExpr *Expr, bool Upper) {
     Rhs = expand(Expr->getOperand(1), Upper);
     if (!Lhs || !Rhs)
       return nullptr;
+
     Lhs = InsertNoopCastOfTo(Lhs, Ty);
     Rhs = InsertNoopCastOfTo(Rhs, Ty);
     return InsertBinop(Instruction::Mul, Lhs, Rhs);
   }
+
+  return nullptr;
 }
 
 // This code is based on the visitUDiv code from SCEVExpander. We only
@@ -239,7 +241,7 @@ Value *SCEVRangeBuilder::visitAddRecExpr(const SCEVAddRecExpr *Expr,
   // But the correct result is (((n-1) * n) / 2)
   if (Expr->isQuadratic())
     return nullptr;
-  
+ 
   // lower.
   if (!Upper)
     return expand(Expr->getStart(), /*Upper*/ false);

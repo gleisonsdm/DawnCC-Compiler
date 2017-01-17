@@ -52,6 +52,9 @@ using namespace lge;
 static cl::opt<bool> ClEmitGPU("Emit-GPU",
 cl::Hidden, cl::desc("Analyse just 'GPU__' functions."));
 
+static cl::opt<bool> ClRun("Run-Mode",
+cl::Hidden, cl::desc("Annotate parallel loops or tasks"));
+
 StringRef WriteInFile::getFileName(Instruction *I) {
   MDNode *Var = I->getMetadata("dbg");
   if (Var)
@@ -208,6 +211,7 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
   if (F->isDeclaration() || F->isIntrinsic()) {
      continue;
   }
+
   if (!findFunctionFileName(*F))
     continue;
 
@@ -219,9 +223,16 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
     Comments.erase(Comments.begin(), Comments.end());
   }
 
-  this->we = &getAnalysis<WriteExpressions>(*F);
-   copyComments(this->we->Comments);
+  if (ClRun) {
+    this->we = &getAnalysis<WriteExpressions>(*F);
+    copyComments(this->we->Comments);
+  }
+  else {
+    this->re = &getAnalysis<RecoverExpressions>(*F);
+    copyComments(this->re->Comments);
+  }
 }   
+
 printToFile(InputFile, generateOutputName(InputFile));
 return false;
 }

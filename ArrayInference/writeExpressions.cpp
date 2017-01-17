@@ -274,7 +274,6 @@ void WriteExpressions::regionIdentify (Region *R) {
   marknumAL(l);
 
   int line = l->getStartLoc().getLine();
-
   if (line == ERROR_VALUE)
     return;
   
@@ -325,17 +324,21 @@ bool WriteExpressions::isSafeMemoryCoalescing (Region *R) {
   return true;
 }
  
-void WriteExpressions::writeKernels (Loop *L, std::string NAME) {
+void WriteExpressions::writeKernels (Loop *L, std::string NAME, bool restric) {
   if (!L)
     return;
+  std::string flag = std::string();
+  if (restric)
+    flag = " if(!RST_" + NAME + ")";
+
   int line = L->getStartLoc()->getLine();
-  std::string pragma = "#pragma acc kernels if(!RST_" + NAME + ")\n";
+  std::string pragma = "#pragma acc kernels" + flag + "\n";
   if (!ClEmitParallel && (ClEmitOMP == ACC)) {
     addCommentToLine(pragma, line);
     return;
   }
   if (!ClEmitParallel && (ClEmitOMP == OMP_CPU)) {
-    pragma = "#pragma omp target if(!RST_" + NAME + ")\n";
+    pragma = "#pragma omp target " + flag + "\n";
     addCommentToLine(pragma, line);
     return;
   }
@@ -354,7 +357,7 @@ void WriteExpressions::writeKernels (Loop *L, std::string NAME) {
   if (ClEmitOMP == ACC)
     addCommentToLine(pragma, line);
   else if (ClEmitOMP == OMP_CPU) {
-    pragma = "#pragma omp target if(!RST_" + NAME + ")\n";
+    pragma = "#pragma omp target" + flag + "\n";
     addCommentToLine(pragma, line);
   }
   if (ClEmitParallel) {
@@ -363,7 +366,8 @@ void WriteExpressions::writeKernels (Loop *L, std::string NAME) {
   }
 }
 
-bool WriteExpressions::annotateAccKernels (Region *R, std::string NAME) {
+bool WriteExpressions::annotateAccKernels (Region *R, std::string NAME,
+                                           bool restric) {
   if (!isSafeMemoryCoalescing(R))
     return false;
   std::map<Loop*, bool> loops;
@@ -376,7 +380,7 @@ bool WriteExpressions::annotateAccKernels (Region *R, std::string NAME) {
       continue;
     if (loops.count(l) == 0) {
       loops[l] = true;
-      writeKernels(l, NAME);
+      writeKernels(l, NAME, restric);
     }
     std::queue<Loop*> q;
     q.push(l);
@@ -407,7 +411,7 @@ void WriteExpressions::writeComputation (int line, int lineEnd,
   if (RC.analyzeRegion(R, line, ERROR_VALUE, ptrRA, rp, aa, se, li, dt, test)) {
     copyComments(RC.Comments);
     clearExpression();
-    annotateAccKernels(R, computationName);
+    annotateAccKernels(R, computationName, RC.restric);
     std::string pragma = "}\n";
     addCommentToLine(pragma, lineEnd);
   }
@@ -424,7 +428,7 @@ void WriteExpressions::regionIdentifyCoalescing (Region *R) {
     return;
 
   }
-    
+
   // For each region of function, we need to run an analysis, trying to identify
   // all memory access used.
   bool regionInvalid = !ptrRA->RegionsRangeData[R].HasFullSideEffectInfo;
@@ -440,7 +444,7 @@ void WriteExpressions::regionIdentifyCoalescing (Region *R) {
       }
     }
   }  
-
+  
   if (regionInvalid) {
     for (auto SR = R->begin(), SRE = R->end(); SR != SRE; ++SR) {
       regionIdentifyCoalescing(&(**SR));

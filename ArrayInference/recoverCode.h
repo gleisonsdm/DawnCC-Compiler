@@ -48,7 +48,7 @@ namespace llvm {
 
 class RecoverCode {
 
-  private:
+  protected:
 
   //===---------------------------------------------------------------------===
   //                              Data Structs
@@ -59,7 +59,6 @@ class RecoverCode {
   std::vector<std::string> Expression;
   
   std::map<Value*, std::pair<int,std::string> > ComputedValues;
-
 
   unsigned int NewVars;
 
@@ -89,21 +88,6 @@ class RecoverCode {
   
   // Return "PointerValue".
   Value *getPointer ();
-
-  // Return a new Index for use.
-  int getNewIndex ();
-
-  // Clear the vector Expression.
-  void clearExpression ();
-
-  // Return the last index used.
-  int getIndex ();
- 
-  // Return the vector Expression in one simple string.
-  std::string getUniqueString ();
-
-  // Insert the command in the list of expressions named commands.
-  void insertCommand (int* var, std::string expression);
 
   // Return the string present in the list of expressions named commands
   // If not found, return an empty string.
@@ -147,19 +131,11 @@ class RecoverCode {
   std::string getPHINode (Value *V, std::string ptrName, int *var,
                           const DataLayout *DT);
 
-  // Return the access expression in a string form, to write in source file.
-  std::string getAccessString (Value *V, std::string ptrName, int *var,
-                              const DataLayout *DT);
-
   // Return true if called function is a Malloc
   bool isMallocCall (const CallInst *CI);
 
   // Return the Region for Basic Block bb.
   Region* regionofBasicBlock (BasicBlock *bb, RegionInfoPass*rp);
-
-  // Transforme some integer that represent a number of bits in
-  // number of bytes. 
-  unsigned int getSizeInBytes (unsigned int sizeInBits) const;
 
   // Set the result of pass as Invalid.
   void setValidTrue();
@@ -179,9 +155,6 @@ class RecoverCode {
 
   // Return a valid bounds to validate the tool's result.
   std::string getValidBounds (std::string Expression, int *Index);
-
-  // Validate the pointer to write the pragmas.
-  bool isValidPointer (Value *Pointer, const DataLayout* DT);
 
   // Return the Expression value converted to the position of the array of
   // "Pointer"
@@ -208,11 +181,14 @@ class RecoverCode {
     this->NewVars = 0;
     this->NAME = "LLVM";
     this->Valid = false;
+    restric = true;
   }
   //===---------------------------------------------------------------------===  
   //                              Data Structs                                   
   //===---------------------------------------------------------------------===
   std::map<unsigned int, std::string> Comments;
+
+  bool restric;  
   //===---------------------------------------------------------------------===
 
   // Set true to emit omp pragmas
@@ -235,6 +211,19 @@ class RecoverCode {
   // Return the bitWidth size to Value as a integer number.
   unsigned int getSizeToValue (Value *V, const DataLayout *DT);
 
+  // Transforme some integer that represent a number of bits in
+  // number of bytes. 
+  unsigned int getSizeInBytes (unsigned int sizeInBits) const;
+
+  // Clear the commands inserted until now.
+  void clearCommands();
+
+  // Insert the command in the list of expressions named commands.
+  void insertCommand (int* var, std::string expression);
+
+  // Validate the pointer to write the pragmas.
+  bool isValidPointer (Value *Pointer, const DataLayout* DT);
+
   // Initialize the class when the programmer like.
   void initializeNewVars();
 
@@ -244,6 +233,22 @@ class RecoverCode {
   // Try to simplify the Region, if possible.
   void simplifyRegion (Region *R, DominatorTree *DT, LoopInfo *LI, 
                           AliasAnalysis *AA);
+  
+  // Return a new Index for use.
+  int getNewIndex ();
+
+  // Clear the vector Expression.
+  void clearExpression ();
+
+  // Return the last index used.
+  int getIndex ();
+ 
+  // Return the vector Expression in one simple string.
+  std::string getUniqueString ();
+
+  // Return the access expression in a string form, to write in source file.
+  std::string getAccessString (Value *V, std::string ptrName, int *var,
+                              const DataLayout *DT);
 
   // Return true for analyzable loop.
   bool analyzeLoop (Loop* L, int Line, int LastLine, PtrRangeAnalysis *ptrRA,

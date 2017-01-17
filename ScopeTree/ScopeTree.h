@@ -83,7 +83,7 @@ class ScopeTree : public FunctionPass {
   std::map<Loop*, STnode> loopNodes;
 
   // Provides information if is knowed the file or not.
-  bool isFileRead;
+  std::map<std::string, bool> isFileRead;
   //===---------------------------------------------------------------------===
 
   // Find the name of the file for instruction I.
@@ -116,6 +116,9 @@ class ScopeTree : public FunctionPass {
   // Identify the parent for each node.
   void identifyParents (Graph *gph);
 
+  // Validade if the statement is valid.
+  bool isValidLoopStatement (STnode node, int line, int column);
+
   // Associate a loop with available information, case possible.
   void associateLoop (Loop *L);
 
@@ -143,9 +146,7 @@ class ScopeTree : public FunctionPass {
 
   static char ID;
 
-  ScopeTree() : FunctionPass(ID) {
-    this->isFileRead = false;
-  };
+  ScopeTree() : FunctionPass(ID) { };
 
   // Uses loop's debug information to identify a pair <line, column> 
   // of the best place to insert computation before loops and present in this

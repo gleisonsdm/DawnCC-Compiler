@@ -59,6 +59,9 @@ Please, change these flags:
   an analysis.
   true : Try rewrite regions.
   false : Use just the regions available in the IR.
+  -> OPTION10 => Define if the annotation will be parallel loops or tasks.
+  true : Annotate parallel loops.
+  false : Annotate tasks (OpenMP only).
 
 # Run Clang and opt loading our dynamic libraries
   ./clang -g -O0 -c -emit-llvm ${BENCH_DIR}/$BENCH.c -o ${BENCH_DIR}/$BENCH.bc
@@ -69,4 +72,5 @@ Please, change these flags:
     -Emit-OMP=$OPTION3 -Restrictifier=$OPTION4 \
     -Parallel-File=$OPTION5 -Discard-Divergent=$OPTION6 \
     -Memory-Coalescing=$OPTION67 -Ptr-licm=$OPTION8 \
-    -Ptr-region=$OPTION9 ${BENCH_DIR}/$BENCH.bc
+    -Ptr-region=$OPTION9 -Run-Mode=$OPTION10 \ 
+    ${BENCH_DIR}/$BENCH.bc

@@ -63,6 +63,11 @@ char RecoverCode::OMPType() {
   return OMPF;
 }
 
+void RecoverCode::clearCommands() {
+  this->NewVars = 0;
+  commands.erase(commands.begin(), commands.end());
+}
+
 void RecoverCode::insertComputedValue (Value *V, int *id, std::string str) {
   if (ComputedValues.count(V) != 0)
     return;
@@ -444,7 +449,7 @@ std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
     expression += nameF.nameInFile + "[";
   
   if (isIntegerIndex)
-    expression += std::to_string(index); 
+    expression += std::to_string(index);
   else {
     index = 0;
     bool justInteger = true;
@@ -463,7 +468,7 @@ std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
     
     if (!justInteger) {
       if (indexes.size() == 1)
-        expression = indexes[0].second;
+        expression += indexes[0].second;
       else {
         std::string lastExp = std::to_string(index);
         for (int i = 0, ie = indexes.size(); i != ie; i++)
@@ -668,12 +673,20 @@ std::string RecoverCode::getPHINode (Value *V, std::string ptrName, int *var,
   // return this name. Return a empty string in the other case.
   PHINode *PHI = cast<PHINode>(V);
   std::map<std::string, bool> names;
-  for (int i = 0, ie = PHI->getNumIncomingValues(); i != ie; i++)
-    names[getNameExp(PHI->getIncomingValue(i), ptrName, var, DT)] = true;
+  for (int i = 0, ie = PHI->getNumIncomingValues(); i != ie; i++) {
+    std::string expression = std::string();
+    expression = getNameExp(PHI->getIncomingValue(i), ptrName, var, DT);
+    if(expression == std::string()) {
+      RecoverNames::VarNames nameF = rn->getNameofValue(PHI->getIncomingValue(i));
+      expression = nameF.nameInFile;
+    }
+    if (expression != std::string())
+      names[expression] = true;
+  }
 
   if (names.size() == 1)
     return names.begin()->first;
-
+  
   return std::string();
 }
 
@@ -1269,8 +1282,11 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
   std::string expressionEnd = std::string();
 
   Restrictifier Rst = Restrictifier();
-  Region *r = regionofBasicBlock((*L->block_begin()), rp);
+  Region *r = regionofBasicBlock((L->getLoopPreheader()), rp);
 
+  if (!ptrRA->RegionsRangeData[r].HasFullSideEffectInfo)
+    r = regionofBasicBlock((L->getHeader()), rp);
+ 
   if (!ptrRA->RegionsRangeData[r].HasFullSideEffectInfo)
     return false;
     
@@ -1291,6 +1307,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
   std::map<std::string, std::string> vctLower;
   std::map<std::string, std::string> vctUpper;
   std::map<std::string, char> vctPtMA;
+  std::map<std::string, Value*> vctPtr;
 
   for (auto It = pointerBounds.begin(), EIt = pointerBounds.end(); It != EIt;
        ++It) {
@@ -1304,6 +1321,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
     vctLower[nameF.nameInFile] = lLimit;
     vctUpper[nameF.nameInFile] = generateCorrectUB(lLimit, uLimit);
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(L, It->first);
+    vctPtr[nameF.nameInFile] = It->first;
 
     if (!isValid()) {
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
@@ -1329,13 +1347,13 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
       Rst.setTrueOMP();
 
     Rst.setName("RST_"+NAME);
-    Rst.getBounds(vctLower, vctUpper);
+    Rst.getBounds(vctLower, vctUpper, vctPtr);
     result = Rst.generateTests(result);
 
+    restric = Rst.isValid();
     // Use to insert test on parallel pragmas
     //if (Rst.isValid())
-    //  test = "if(!RST_" + NAME + ")";
-    
+    //  test = "if(!RST_" + NAME + ")"; 
     Comments[Line] = result;
   }
   return isValid();
@@ -1346,7 +1364,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
                                         RegionInfoPass *rp, AliasAnalysis *aa,
                                         ScalarEvolution *se, LoopInfo *li,
                                         DominatorTree *dt, std::string & test) {
-  
+
   // Initilize The Analisys with Default Values.
   initializeNewVars(); 
   Module *M = r->block_begin()->getParent()->getParent();
@@ -1392,6 +1410,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
   std::map<std::string, std::string> vctLower;
   std::map<std::string, std::string> vctUpper;
   std::map<std::string, char> vctPtMA;
+  std::map<std::string, Value*> vctPtr;
 
   for (auto It = pointerBounds.begin(), EIt = pointerBounds.end(); It != EIt;
        ++It) {
@@ -1405,7 +1424,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
     vctLower[nameF.nameInFile] = lLimit;
     vctUpper[nameF.nameInFile] = generateCorrectUB(lLimit, uLimit);
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(r, It->first);
-
+    vctPtr[nameF.nameInFile] = It->first;
     //errs() << nameF.nameInFile << "\n" << lLimit << "\n" << uLimit << "\n\n" ;
     
     if (!isValid()) {
@@ -1431,9 +1450,10 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
       Rst.setTrueOMP();
 
     Rst.setName("RST_"+NAME);
-    Rst.getBounds(vctLower, vctUpper);
+    Rst.getBounds(vctLower, vctUpper, vctPtr);
     result = Rst.generateTests(result);
 
+    restric = Rst.isValid();
     // Use to insert test on parallel pragmas
     //if (Rst.isValid())
     //  test = "if(!RST_" + NAME + ")";

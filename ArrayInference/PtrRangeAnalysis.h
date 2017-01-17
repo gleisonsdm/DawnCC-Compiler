@@ -100,10 +100,10 @@ class PtrRangeAnalysis : public FunctionPass {
   std::map<Function*, bool> ValidFunctions;
 
   // Map of memory acess present in loops.
-  std::map<Loop*, std::map<Value*,char> > PointerAcess;
+  std::map<Loop*, std::map<Value*,char> > PointerAccess;
   
   // Map of memory acess present in loops.
-  std::map<Region*, std::map<Value*,char> > PointerAcessRegion;
+  std::map<Region*, std::map<Value*,char> > PointerAccessRegion;
 
   // Analyses used.
   ScalarEvolution *SE;
@@ -124,6 +124,13 @@ class PtrRangeAnalysis : public FunctionPass {
 
   // Insert the expression for invariant load instruction.
   bool insertInvariantLoadRange (Instruction *Inst);
+
+  // Find a PHINode in all dependences of a single instruction.
+  bool hasPHIRec(Value *V);
+
+  // Provide extra info to infer bounds correctly.
+  bool isInvalidOperand(Value *V);
+  bool isInvalidOperand(Value *V, std::map<Value*,bool> & used);
 
   // Collects range data for a single instruction. Returns false if the
   // instruction can have memory side-effects but we were not able to extract
@@ -146,6 +153,10 @@ class PtrRangeAnalysis : public FunctionPass {
   // Find loops and try optimize them.
   void tryOptimizeFunction(Function *F, LoopInfo *LI);
 
+  // Provides an abstraction of the graph of functions called in CallInst
+  // instructions in the IR, searching and matching dependences.
+  void analyzeRegionPointers (Region *R, std::map<Function*,Region*> & funcs);
+  
 public:
   static char ID;
   explicit PtrRangeAnalysis() : FunctionPass(ID) {}

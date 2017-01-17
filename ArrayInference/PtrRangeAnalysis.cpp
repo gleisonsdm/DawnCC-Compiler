@@ -124,23 +124,23 @@ Value *lge::getBasePtrValue(Instruction *Inst, const Region *R, LoopInfo *LI,
 }
 
 char PtrRangeAnalysis::getPointerAcessType (Loop *L, Value *V) {
-  if (PointerAcess.count(L) &&
-      PointerAcess[L].count(V))
-    return PointerAcess[L][V];
+  if (PointerAccess.count(L) &&
+      PointerAccess[L].count(V))
+    return PointerAccess[L][V];
   return LOADSTORE;
 }
 
 char PtrRangeAnalysis::getPointerAcessType (Region *R, Value *V) {
-  if (PointerAcessRegion.count(R) &&
-      PointerAcessRegion[R].count(V))
-    return PointerAcessRegion[R][V];
+  if (PointerAccessRegion.count(R) &&
+      PointerAccessRegion[R].count(V))
+    return PointerAccessRegion[R][V];
   return LOADSTORE;
 }
 
 void PtrRangeAnalysis::analyzeLoopPointers (Loop *L) {
   for (auto BB = L->block_begin(), BE = L->block_end(); BB != BE; BB++) {
     for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
-      if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+      if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<GetElementPtrInst>(I)) {
         Value *BasePtrV = getPointerOperand(I);
         while (isa<LoadInst>(BasePtrV) || isa<GetElementPtrInst>(BasePtrV)) {
           if (LoadInst *LD = dyn_cast<LoadInst>(BasePtrV))
@@ -148,19 +148,29 @@ void PtrRangeAnalysis::analyzeLoopPointers (Loop *L) {
           if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(BasePtrV))
             BasePtrV = GEP->getPointerOperand();
         }
-        if (isa<LoadInst>(I))
-          PointerAcess[L][BasePtrV] |= LOAD;
+        if (isa<LoadInst>(I) || isa<GetElementPtrInst>(I))
+          PointerAccess[L][BasePtrV] |= LOAD;
         if (isa<StoreInst>(I))
-          PointerAcess[L][BasePtrV] |= LOADSTORE;
+          PointerAccess[L][BasePtrV] |= LOADSTORE;
       }
     }
   }
 }
 
 void PtrRangeAnalysis::analyzeRegionPointers (Region *R) {
+  std::map<Function*, Region*> funcs;
+  Function *F = R->block_begin()->getParent();
+  funcs[F] = R;
+  analyzeRegionPointers(R, funcs);
+}
+
+void PtrRangeAnalysis::analyzeRegionPointers (Region *R,
+                                          std::map<Function*,Region*> & funcs) {
+ 
+  Function *FF = R->block_begin()->getParent();
   for (auto BB = R->block_begin(), BE = R->block_end(); BB != BE; BB++) {
     for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
-      if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+      if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<GetElementPtrInst>(I)) {
         Value *BasePtrV = getPointerOperand(I);
         while (isa<LoadInst>(BasePtrV) || isa<GetElementPtrInst>(BasePtrV)) {
           if (LoadInst *LD = dyn_cast<LoadInst>(BasePtrV))
@@ -168,10 +178,50 @@ void PtrRangeAnalysis::analyzeRegionPointers (Region *R) {
           if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(BasePtrV))
             BasePtrV = GEP->getPointerOperand();
         }
-        if (isa<LoadInst>(I))
-          PointerAcessRegion[R][BasePtrV] |= LOAD;
+        if (isa<LoadInst>(I) || isa<GetElementPtrInst>(I))
+          PointerAccessRegion[R][BasePtrV] |= LOAD;
         if (isa<StoreInst>(I))
-          PointerAcessRegion[R][BasePtrV] |= LOADSTORE;
+          PointerAccessRegion[R][BasePtrV] |= LOADSTORE;
+      }
+      else if(CallInst *CI = dyn_cast<CallInst>(I)) {
+        Value *V = CI->getCalledValue();
+        if (!isa<Function>(V))
+          continue;
+       
+         Function *F = cast<Function>(V);
+         if (F->isDeclaration() || F->isIntrinsic())
+           continue;
+
+        if (funcs.count(F) != 0)
+          continue;
+
+         unsigned int i = 0;
+         // Provides the top level Region, to identify the correct set of
+         // instructions.
+         funcs[F] = funcs[FF];
+         std::map<Value*, Value*> args;
+         Region *topLevel = this->RI->getRegionFor(F->begin());
+         if (!topLevel)
+           continue;
+         // Find and associate all arguments and local pointers. 
+         for (auto I = F->arg_begin(), IE = F->arg_end(); I != IE; I++, i++) {
+           V = CI->getArgOperand(i);
+           args[V] = (&(*I));
+           args[(&(*I))] = V;
+        }
+        // Find the access type and model it, trying to provide the type
+        // of each pointer acess in the function.
+        analyzeRegionPointers(topLevel, funcs);
+        
+        for (auto J = PointerAccessRegion[topLevel].begin(), 
+             JE = PointerAccessRegion[topLevel].end(); J != JE; J++) {
+           // A dependence is just of arguments and global values, this is
+           // valid just to the memory model type.
+           if (isa<Argument>(J->first))
+             PointerAccessRegion[R][args[J->first]] |= J->second;
+           else if(isa<GlobalValue>(J->first))
+             PointerAccessRegion[R][J->first] |= J->second;
+        }
       }
     }
   }
@@ -418,6 +468,58 @@ bool PtrRangeAnalysis::insertInvariantLoadRange (Instruction *Inst) {
   return true;
 }
 
+bool PtrRangeAnalysis::hasPHIRec(Value *V) {
+  if (!isa<Instruction>(V))
+    return false;
+  
+  Instruction *I = cast<Instruction>(V);
+  if (isa<PHINode>(I))
+    return true;
+
+  for (unsigned int i = 0; i < I->getNumOperands(); i++) {
+    if (hasPHIRec(I->getOperand(i)))
+      return true;
+  }
+  return false;
+}
+
+bool PtrRangeAnalysis::isInvalidOperand(Value *V) {
+  std::map<Value*, bool> used;
+  return (isInvalidOperand(V, used));
+}
+
+bool PtrRangeAnalysis::isInvalidOperand(Value *V,
+                                        std::map<Value*, bool> & used) {
+  if (!isa<Instruction>(V))
+    return false;
+ 
+  if (used.count(V))
+    return used[V];
+  used[V] = false;
+
+  Instruction *I = cast<Instruction>(V);
+
+  if ((I->getOpcode() == Instruction::Mul) ||
+      (I->getOpcode() == Instruction::FMul)) {
+    bool hasPHI = false;
+    for (unsigned int i = 0; i < I->getNumOperands(); i++) {
+      if (hasPHIRec(I->getOperand(i)) && hasPHI) {
+        used[V] = true;
+        return true;
+      }
+      if(hasPHIRec(I->getOperand(i)))
+        hasPHI = true;
+    }
+  }
+
+  bool result = false;
+  for (unsigned int i = 0; i < I->getNumOperands(); i++)   
+    if (isInvalidOperand(I->getOperand(i), used))
+      return true;
+ 
+  return false;
+}
+
 bool PtrRangeAnalysis::collectRangeInfo(Instruction *Inst,
                                         RegionRangeInfo *RegionData,
                                         SCEVRangeBuilder *RangeBuilder) {
@@ -459,9 +561,17 @@ bool PtrRangeAnalysis::collectRangeInfo(Instruction *Inst,
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(BasePtrV))
       BasePtrV = GEP->getPointerOperand();
   }
-  
+
   if (!BasePtrV)
     return false;
+
+  if (StoreInst *ST = dyn_cast<StoreInst>(Inst))
+    if (isInvalidOperand(ST->getPointerOperand()))
+      return false;
+  if (LoadInst *LD = dyn_cast<LoadInst>(Inst))
+    if (isInvalidOperand(LD->getPointerOperand()))
+      return false;
+
 
   // Store data for this access.
   if (!RegionData->BasePtrsData.count(BasePtrV))
@@ -471,7 +581,7 @@ bool PtrRangeAnalysis::collectRangeInfo(Instruction *Inst,
   RegionData->BasePtrsData[BasePtrV].AccessInstructions.push_back(Inst);
   RegionData->BasePtrsData[BasePtrV].AccessFunctions.push_back(
       AccessFunction);
-  
+ 
   numAMA++;
   return true;
 }
