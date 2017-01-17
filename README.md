@@ -1,4 +1,8 @@
-# DawnCC - A Source to Source Compiler 
+# DawnCC - A Source to Source Compiler for Parallelizing C/C++ Programs with Code Annotation
+
+[Project Webpage](http://cuda.dcc.ufmg.br/dawn)
+
+[Code Repository](https://github.com/gleisonsdm/DawnCC-Compiler/)
 
 ## Introduction
 
@@ -14,7 +18,7 @@ Amongst the hurdles involved in annotating code, two tasks are particularly chal
 
 We have developed DawnCC as a tool to automate the performance of these tasks. Through the implementation of a static analysis that derives memory access bounds from source code, it infers the size of memory regions in C and C++ programs. With these bounds, it is capable of inserting data copy directives in the original source code. These directives provide a compatible compiler with information on which data must be moved between devices. Given the source code of a program as input, our tool can then provide the user with a modified version containing directives with proper memory bounds specified, all without any further intervention from the user, effectively freeing developers from the burdensome task of manual code modification. 
 
-We implemented DawnCC as a collection of compiler modules, or passes, for the LLVM compiler infrastructure, with this webpage functioning as a front-end for users to provide program source codes as input. The program is then compiled by LLVM and transformed by our passes to produce the modified source code as output to the webpage user. There are also a few options to customize the output, such as printing runtime statistics.
+We implemented DawnCC as a collection of compiler modules, or passes, for the LLVM compiler infrastructure, whose code is available in this repository.
 
 ## Functionality
 
