@@ -116,7 +116,7 @@ To run DawnCC, copy and paste the text below into a shell script file. You will 
  	$OPT -S $FLAGSAI -load $ST -load $WAI -writeInFile -stats -Emit-GPU=< op1 > \
  	  -Emit-Parallel=< op2 > -Emit-OMP=< op3 > -Restrictifier=< op4 > \
  	  -Memory-Coalescing=< op5 > -Ptr-licm=< op6 > -Ptr-region=< op7 > \
-	  -Run-Mode=true result2.bc -o result3.bc
+	  -Run-Mode=false result2.bc -o result3.bc
 
  	$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i < Source Code Files (.c/.cc/.cpp) >
 
