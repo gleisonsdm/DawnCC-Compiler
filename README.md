@@ -34,6 +34,16 @@ In order to use these standards to offload execution to accelerators, it is nece
 
 [Portland Group](http://www.pgroup.com/index.htm)
 
+There are other compilers that provide support for OpenACC or OpenMP 4.0, either as fully-supported features or as experimental implementations. Below is a small list of such compilers:
+
+[OpenMP Clang](http://openmp.llvm.org/) - The OpenMP runtime Clang implementation has been officially moved to an LLVM subproject. Currently supports offloading to accelerators using OpenMP 4.0 directives.
+
+[GCC 5+](https://gcc.gnu.org/wiki/openmp) - Starting from version 5.0, GCC provides support for computation offloading through OpenMP 4.0 directives.
+
+[Pathscale](http://www.pathscale.com/) - Pathscale's EKOPath compiler suite supposedly supports offloading with OpenMP 4.0+, as well as other annotation standards.
+
+Note that, since most implementations are premiliminary and tend to change considerably, the annotation syntax inserted by DawnCC, while standard compliant, might not be fully compatible with each compiler's implementation. If you attempt to use a compiler that provides support for these standards but does not compile the annotation format DawnCC uses, we would appreciate knowing about it!
+
 ## Installation
 
 The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separately from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. The base LLVM version used in this project was LLVM 3.7 release:
