@@ -224,12 +224,12 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
   }
 
   if (ClRun) {
-    this->we = &getAnalysis<WriteExpressions>(*F);
-    copyComments(this->we->Comments);
-  }
-  else {
     this->re = &getAnalysis<RecoverExpressions>(*F);
     copyComments(this->re->Comments);
+  }
+  else {
+    this->we = &getAnalysis<WriteExpressions>(*F);
+    copyComments(this->we->Comments);
   }
 }   
 
