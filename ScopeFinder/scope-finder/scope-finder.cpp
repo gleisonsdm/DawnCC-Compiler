@@ -183,12 +183,24 @@ public:
         string FuncName;
         mangleContext = astContext->createMangleContext();
 
+        /*C++ CTors/Dtors are special snowflakes and have their own manglers*/
+        if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(D)) {  
+          raw_string_ostream Stream(FuncName);
+          mangleContext->mangleCXXDtor(DD, Dtor_Base, Stream);
+        }
+
+        else if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(D)) {  
+          raw_string_ostream Stream(FuncName);
+          mangleContext->mangleCXXCtor(CD, Ctor_Base, Stream);
+        }
+
         /*retrieve mangled name when appropriate, otherwise use plain*/
-        if (mangleContext->shouldMangleDeclName(D)) {
+        else if (mangleContext->shouldMangleDeclName(D)) {
           raw_string_ostream Stream(FuncName);
           mangleContext->mangleName(D, Stream);
           FuncName = Stream.str();
         }
+
         else {
           FuncName = D->getNameAsString();
         }

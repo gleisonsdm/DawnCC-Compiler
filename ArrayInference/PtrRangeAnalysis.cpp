@@ -354,7 +354,7 @@ bool lge::insertOperandsRec(Instruction *I, Loop *L,
     return true;
   }
   for (int i = 0, ie = I->getNumOperands(); i != ie; i++) {
-    if (isa<PHINode>(I->getOperand(i)) || isa<GlobalValue>(I->getOperand(i)))
+    if (isa<PHINode>(I->getOperand(i)))
       return false;
     if (Instruction *Inst = dyn_cast<Instruction>(I->getOperand(i))) {
       if (isPresentOnLoop(Inst, L))
