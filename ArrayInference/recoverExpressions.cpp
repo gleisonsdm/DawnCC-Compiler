@@ -112,6 +112,20 @@ std::string RecoverExpressions::analyzeCallInst(CallInst *CI,
   if (CI->getNumArgOperands() == 0)
     return output;
 
+  // Define if this CALL INST is contained in the knowed tasks well
+  // define by Task Miner
+  /*bool isTask = false;
+  for (auto &I: *(this->tm->getTasks())) {
+    if (FunctionCallTask *FCT = dyn_cast<FunctionCallTask>(I)) {
+      if (FCT->getFunctionCall() == CI) {
+        isTask = true;
+        break;
+      }
+    }
+  }
+  if (isTask == false)
+    return output;
+  */
   output = analyzeValue(CI->getArgOperand(0), DT, RC);
   if (output == std::string()) {
     return std::string();
@@ -246,7 +260,7 @@ void RecoverExpressions::annotateExternalLoop(Instruction *I) {
 void RecoverExpressions::analyzeFunction(Function *F) {
   const DataLayout DT = F->getParent()->getDataLayout();
   RecoverCode RC;
-  std::string computationName = "TM" + std::to_string(getNewIndex());
+  std::string computationName = "TM" + std::to_string(getIndex());
   RC.setNAME(computationName);
   RC.setRecoverNames(rn);
   RC.initializeNewVars();
@@ -256,6 +270,8 @@ void RecoverExpressions::analyzeFunction(Function *F) {
     for (auto I = BB->begin(), IE = BB->end(); I != IE; I++) {
       if (isa<CallInst>(I)) {
         valid = true;
+        computationName = "TM" + std::to_string(getNewIndex());
+        RC.setNAME(computationName);
         std::string result = analyzeValue(I, &DT, &RC);
         if (result != std::string()) {
           std::string output = std::string();
@@ -393,6 +409,7 @@ bool RecoverExpressions::runOnFunction(Function &F) {
   this->rr = &getAnalysis<RegionReconstructor>();
   this->st = &getAnalysis<ScopeTree>();
   this->ptrRa = &getAnalysis<PtrRangeAnalysis>();
+  //this->tm = &getAnalysis<TaskMiner>();
 
   index = 0;
   if (ClRegionTask == true)

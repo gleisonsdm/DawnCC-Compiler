@@ -64,7 +64,7 @@ class ConstantsSimplify {
   double getConstantDataArray (const ConstantDataArray *C);
   double getConstantDataVector (const ConstantDataVector *C);
   double getConstantExpr (ConstantExpr *C, const DataLayout *DT);
-  double getConstantFP (const ConstantFP *C) const;
+  double getConstantFP (const ConstantFP *C);
   double getConstantInt (const ConstantInt *C) const;
   double getConstantPointerNull (ConstantPointerNull *C, const DataLayout *DT);
   double getConstantStruct (const ConstantStruct *C);

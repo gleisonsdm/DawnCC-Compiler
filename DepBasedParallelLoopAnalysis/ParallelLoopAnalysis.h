@@ -35,6 +35,15 @@ class ParallelLoopAnalysis : public llvm::FunctionPass {
     llvm::Instruction &Dst);
   void checkRegisterDependencies(llvm::Loop *);
 
+  // Find all PHINode Instructions used to index a loop.
+  void getPHIMAPS(llvm::Function *F, std::map<llvm::PHINode*,bool> & PHIS);
+
+  // Check if exists a PHI node that is not a induction variable.
+  bool checkPHIIndexDepRec(llvm::Value *V, std::map<llvm::PHINode*,bool> & PHIS);
+
+  // Validade the loop's memory access.
+  bool isLoopSafetly(llvm::Loop *L);
+
 public:
   static char ID;
   explicit ParallelLoopAnalysis() : FunctionPass(ID) {}

@@ -129,21 +129,24 @@ void Restrictifier::identifyOffsets (std::string str) {
 
 void Restrictifier::getBounds (std::map<std::string, std::string> & lowerB,
                                std::map<std::string, std::string> & upperB,
-                               std::map<std::string, Value*> pointersB) {
+                               std::map<std::string, Value*> pointersB,
+                               std::map<std::string, bool> needR) {
   for (auto I = lowerB.begin(), IE = lowerB.end(); I != IE; I++) {
     limits[I->first] = std::make_pair(I->second, upperB[I->first]);
     pointers[I->first] = pointersB[I->first];
+    needRef[I->first] = needR[I->first];
   }
 }
 
 std::string Restrictifier::generateRestrict (std::string varA, std::string varB) {
-  
+  std::string varAA = ((needRef[varA]) ? ("&" + varA) : (varA));
+  std::string varBB = ((needRef[varB]) ? ("&" + varB) : (varB));
   std::string str = std::string();
   str += NAME + " |= ";
-  str += "!((" + varA + " + " + limits[varA].first + " > ";
-  str += varB + " + " + limits[varB].second + ")\n|| ";
-  str += "(" + varB + " + " + limits[varB].first + " > ";
-  str += varA + " + " + limits[varA].second + "));\n";
+  str += "!(((void*) (" + varAA + " + " + limits[varA].first + ") > ";
+  str += "(void*) (" + varBB + " + " + limits[varB].second + "))\n|| ";
+  str += "((void*) (" + varBB + " + " + limits[varB].first + ") > ";
+  str += "(void*) (" + varAA + " + " + limits[varA].second + ")));\n";
   return str;
 }
 

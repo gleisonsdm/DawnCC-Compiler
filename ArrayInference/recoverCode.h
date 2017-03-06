@@ -71,6 +71,8 @@ class RecoverCode {
   char OMPF;
   
   Value *PointerValue;
+
+  unsigned int numPHIRec;
   //===---------------------------------------------------------------------===
 
   // Insert the values after computate its solution
@@ -173,14 +175,24 @@ class RecoverCode {
                              std::map<std::string, char> & vctPtMA);
 
   // Generate the correct upper bound to each pointer analyzed.
-  std::string generateCorrectUB (std::string lLimit, std::string uLimit) ;
+  void generateCorrectUB (std::string lLimit, std::string uLimit,
+                          std::string & olLimit, std::string & oSize);
+
+  // Return case the pointer is defined inside a region (in this case,
+  // we cannot annotate it).
+  bool pointerDclInsideRegion(Region *R, Value *V);
   
+  // Return case the pointer is defined inside a loop (in this case,
+  // we cannot annotate it).
+  bool pointerDclInsideLoop(Loop *L, Value *V); 
+
   public:
 
   RecoverCode () {
     this->NewVars = 0;
     this->NAME = "LLVM";
     this->Valid = false;
+    this->numPHIRec = 10;
     restric = true;
   }
   //===---------------------------------------------------------------------===  
@@ -249,6 +261,9 @@ class RecoverCode {
   // Return the access expression in a string form, to write in source file.
   std::string getAccessString (Value *V, std::string ptrName, int *var,
                               const DataLayout *DT);
+
+  // Define if we need to dereference the pointer.
+  bool needPointerAddrToRestrict(Value *V);
 
   // Return true for analyzable loop.
   bool analyzeLoop (Loop* L, int Line, int LastLine, PtrRangeAnalysis *ptrRA,

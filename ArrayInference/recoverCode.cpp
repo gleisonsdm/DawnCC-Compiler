@@ -232,7 +232,7 @@ std::string RecoverCode::getGenericExp (Instruction *I,
   maskMul <<= 31;
   bool isInteger = false;
   if (!I || I->getNumOperands() != 2) {
-    setValidFalse();
+     setValidFalse();
      return std::string();
   }
 
@@ -258,7 +258,7 @@ std::string RecoverCode::getGenericExp (Instruction *I,
     break;
     case Instruction::Mul:
       signal = "*";
-      if (isInteger && ((num1 > maskMul) || (num2 > maskMul)))
+      if (isInteger && ((num1 > maskMul) || (num2 > maskMul))) 
         setValidFalse();
       result = num1 * num2;
     break;
@@ -429,7 +429,7 @@ std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
         GEP->getPointerOperand()->dump();
         errs() << sIndex << "\n";
         errs() << "tmpIndex = " << tmpIndex << "\n";
-        errs() << op << "\n";
+;
          setValidFalse();
       }*/
       value = GEP->getOperand(0);
@@ -444,7 +444,7 @@ std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
       isIntegerIndex = false;
     indexes.push_back(std::make_pair(*var,sIndex));
   }
-
+ 
   if (name != nameF.nameInFile)
     expression += nameF.nameInFile + "[";
   
@@ -668,7 +668,7 @@ std::string RecoverCode::getPHINode (Value *V, std::string ptrName, int *var,
                                      const DataLayout *DT) {
   if (!isa<PHINode>(V))
     return std::string();
-  
+
   // Try find in all operands of PHINode the name, if the name are the same,
   // return this name. Return a empty string in the other case.
   PHINode *PHI = cast<PHINode>(V);
@@ -676,7 +676,7 @@ std::string RecoverCode::getPHINode (Value *V, std::string ptrName, int *var,
   for (int i = 0, ie = PHI->getNumIncomingValues(); i != ie; i++) {
     std::string expression = std::string();
     expression = getNameExp(PHI->getIncomingValue(i), ptrName, var, DT);
-    if(expression == std::string()) {
+    if (expression == std::string()) {
       RecoverNames::VarNames nameF = rn->getNameofValue(PHI->getIncomingValue(i));
       expression = nameF.nameInFile;
     }
@@ -686,7 +686,11 @@ std::string RecoverCode::getPHINode (Value *V, std::string ptrName, int *var,
 
   if (names.size() == 1)
     return names.begin()->first;
-  
+
+  errs() << "\n" << names.size() << " names for:\n";
+  for (auto I = names.begin(), IE = names.end(); I != IE; I++) {
+    errs() << I->first << "\n";
+  } 
   return std::string();
 }
 
@@ -868,13 +872,54 @@ std::string RecoverCode::getIndextoGEP (GetElementPtrInst*  GEP,
       value = CS.getUniqueConstantInteger(C, getPointer() ,DT);
       value = getSumofTypeSize(tpy,value,DT);
       sum += value;
-      if (!CS.isValid())
+      if (!CS.isValid()) {
         setValidFalse();
+      }
     }
     else {
-      int op = -1;
-      long long int num = 0;
-      exp = getAccessString(*I, name, &op, DT);
+     int op = -1;
+     long long int num = 0;
+     exp = getAccessString(*I, name, &op, DT);
+
+     // Provide the correct BasePointer:
+     Instruction *Inst = nullptr;
+     if (isa<Instruction>(I))
+       Inst = cast<Instruction>(I);
+     Value *vl = Inst;
+
+     while (vl) {
+       if (isa<Argument>(Inst))
+         break;
+       if (isa<AllocaInst>(Inst))
+         break;
+       if (isa<GlobalValue>(Inst))
+         break;
+       if (isa<PHINode>(Inst))
+         break;
+       vl = Inst->getOperand(0);
+       if (!isa<Instruction>(vl))
+         break;
+       Inst = cast<Instruction>(vl);
+     }
+     if (vl) {
+      Type *tp = nullptr;
+      if (Argument *Arg = dyn_cast<Argument>(vl))
+        tp = Arg->getType();
+      else if (AllocaInst *Alc = dyn_cast<AllocaInst>(vl))
+        tp = Alc->getType();
+      else if (GlobalValue *Gvl = dyn_cast<GlobalValue>(vl))
+        tp = Gvl->getType();
+      else if (BitCastInst *Bi = dyn_cast<BitCastInst>(vl))
+        tp = Bi->getType();
+      if (tp) {
+        Type *tpe = getInternalType(tp, 0, DT);
+        if (tpe != tp)
+          if (isValidPointer(vl,DT)) {
+            exp = "*" + exp;
+          }
+      }        
+    }
+
       if (TryConvertToInteger(exp, &num) && op == -1) {
         sum += getSumofTypeSize(tpy, num, DT);
       }
@@ -1033,13 +1078,16 @@ bool RecoverCode::isValidPointer (Value *Pointer, const DataLayout* DT) {
     Ty = BI->getType();
   if (isa<Argument>(Pointer))
     Ty = Pointer->getType();
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(Pointer))
+    Ty = AI->getAllocatedType();
   if (Ty == nullptr)
     return false;
   Ty = getInternalType(Ty, 0, DT);
   // After analyze all possible instructions, validate the type,
   if (Ty->getTypeID() == Type::ArrayTyID ||
-      Ty->getTypeID() == Type::PointerTyID)
+      Ty->getTypeID() == Type::PointerTyID) {
     return false;
+  }
   return true;
 }
 
@@ -1059,6 +1107,7 @@ std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
   }
 
   if (!isValidPointer(Pointer, DT)) {
+    Pointer->dump();
     setValidFalse();
     return std::string();
   }
@@ -1247,23 +1296,107 @@ std::string RecoverCode::getDataPragmaRegion (
   return result;
 }
 
-std::string RecoverCode::generateCorrectUB (std::string lLimit,
-                                            std::string uLimit) {
+void RecoverCode::generateCorrectUB (std::string lLimit, std::string uLimit,
+                                 std::string & olLimit, std::string & oSize) {
   long long int num1 = 0, num2 = 0, result = 0;
+  olLimit = lLimit;
   if (TryConvertToInteger(lLimit, &num1)
       && TryConvertToInteger(uLimit, &num2)) {
     result = num2 - num1;
-    return std::to_string(result);
+    if (result > 0)
+      oSize = std::to_string(result);
+    else {
+      olLimit = std::to_string((num1 + result));
+      oSize = std::to_string((-1 * result));
+    }
+    return;
   }
 
   if (lLimit == "0") {
-    return uLimit; 
+    oSize = uLimit; 
+    return;
   }
 
+  // Provide the correct size to OMP / ACC pragmas.
   std::string expression = uLimit + " - " + lLimit + ";\n"; 
   int index = -1;                                                               
   insertCommand(&index, expression);
-  return (NAME + "[" + std::to_string(index) + "]");
+  std::string size = (NAME + "[" + std::to_string(index) + "]");
+
+  // Check if the size is non-negative.
+  std::string expressionTmp = "(" + size + " > 0);\n";
+  int index2 = -1;
+  insertCommand(&index2, expressionTmp);
+ 
+  // Case the size is negative, correct the bounds..
+  std::string newLB = lLimit + " + " + size + ";\n";
+  int index3 = -1;
+  insertCommand(&index3, newLB);
+
+  std::string newSIZE = "-1 * " + size + ";\n";
+  int index4 = -1;
+  insertCommand(&index4, newSIZE);
+ 
+  // Instructions to define how size will be use as Base Pointer.
+  expressionTmp = (NAME + "[" + std::to_string(index2) + "] ? ");
+  expressionTmp +=  lLimit + " : ";
+  expressionTmp += (NAME + "[" + std::to_string(index3) + "]"); 
+  expressionTmp += ";\n";
+  int index5 = -1;     
+  insertCommand(&index5, expressionTmp);
+  olLimit = (NAME + "[" + std::to_string(index5) + "]");
+  
+  // Instructions to define how is the correct size.
+  expressionTmp = (NAME + "[" + std::to_string(index2) + "] ? ");
+  expressionTmp +=  size + " : ";
+  expressionTmp += (NAME + "[" + std::to_string(index4) + "]"); 
+  expressionTmp += ";\n";
+  int index6 = -1;     
+  insertCommand(&index6, expressionTmp);
+  oSize = (NAME + "[" + std::to_string(index6) + "]");
+}
+
+bool RecoverCode::pointerDclInsideRegion(Region *R, Value *V) {
+  if (isa<GlobalValue>(V) || isa<Argument>(V))
+    return false;
+  
+  if (!isa<Instruction>(V))
+    return false;
+
+  Instruction *Inst = cast<Instruction>(V);
+  for (auto BB = R->block_begin(), BE = R->block_end(); BB != BE; BB++)
+    for (auto I = BB->begin(), IE = BB->end(); I != IE; I++) {
+      if (Inst == I)
+        return true;
+    }
+  return false;
+}
+
+bool RecoverCode::pointerDclInsideLoop(Loop *L, Value *V) {
+  if (isa<GlobalValue>(V) || isa<Argument>(V))
+    return false;
+  
+  if (!isa<Instruction>(V))
+    return false;
+
+  Instruction *Inst = cast<Instruction>(V);
+  for (auto BB = L->block_begin(), BE = L->block_end(); BB != BE; BB++)
+    for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
+      if (Inst == I)
+        return true;
+    }
+  return false;
+}
+
+bool RecoverCode::needPointerAddrToRestrict(Value *V) {
+  if (!isa<AllocaInst>(V))
+    return false;
+  // After mem2reg, we will have just local variables (as AllocaInst)
+  // to provide correct pointers to restrictifier... 
+  AllocaInst *ALI = cast<AllocaInst>(V);
+  if (!ALI->isArrayAllocation())
+    return true;
+  return false;
 }
 
 bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
@@ -1295,7 +1428,8 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
 
   // Generate and store both bounds for each base pointer in the region.
   for (auto& pair : ptrRA->RegionsRangeData[r].BasePtrsData) {
-
+    if (pointerDclInsideLoop(L,pair.first))
+      continue;
     // Adds "sizeof(element)" to the upper bound of a pointer, so it gives us
     // the address of the first byte after the memory region.
     Value *low = rangeBuilder.getULowerBound(pair.second.AccessFunctions);
@@ -1308,6 +1442,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
   std::map<std::string, std::string> vctUpper;
   std::map<std::string, char> vctPtMA;
   std::map<std::string, Value*> vctPtr;
+  std::map<std::string, bool> needR;
 
   for (auto It = pointerBounds.begin(), EIt = pointerBounds.end(); It != EIt;
        ++It) {
@@ -1317,12 +1452,15 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
         &DT);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
         &DT);
-    
-    vctLower[nameF.nameInFile] = lLimit;
-    vctUpper[nameF.nameInFile] = generateCorrectUB(lLimit, uLimit);
+   
+    std::string olLimit = std::string();
+    std::string oSize = std::string();
+    generateCorrectUB(lLimit, uLimit, olLimit, oSize);
+    vctLower[nameF.nameInFile] = olLimit;
+    vctUpper[nameF.nameInFile] = oSize;
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(L, It->first);
     vctPtr[nameF.nameInFile] = It->first;
-
+    needR[nameF.nameInFile] = needPointerAddrToRestrict(It->first);
     if (!isValid()) {
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
         " code for bounds of pointer: " << (nameF.nameInFile.empty() ?
@@ -1347,7 +1485,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
       Rst.setTrueOMP();
 
     Rst.setName("RST_"+NAME);
-    Rst.getBounds(vctLower, vctUpper, vctPtr);
+    Rst.getBounds(vctLower, vctUpper, vctPtr, needR);
     result = Rst.generateTests(result);
 
     restric = Rst.isValid();
@@ -1398,7 +1536,9 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
   SCEVRangeBuilder rangeBuilder(se, DT, aa, li, dt, r, insertPt);
   // Generate and store both bounds for each base pointer in the region.
   for (auto& pair : ptrRA->RegionsRangeData[r].BasePtrsData) {
-
+    if (pointerDclInsideRegion(r,pair.first)) {
+      continue;
+    }
     // Adds "sizeof(element)" to the upper bound of a pointer, so it gives us
     // the address of the first byte after the memory region.
     Value *low = rangeBuilder.getULowerBound(pair.second.AccessFunctions);
@@ -1411,6 +1551,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
   std::map<std::string, std::string> vctUpper;
   std::map<std::string, char> vctPtMA;
   std::map<std::string, Value*> vctPtr;
+  std::map<std::string, bool> needR;
 
   for (auto It = pointerBounds.begin(), EIt = pointerBounds.end(); It != EIt;
        ++It) {
@@ -1420,17 +1561,21 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
         &DT);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
         &DT);
-    
-    vctLower[nameF.nameInFile] = lLimit;
-    vctUpper[nameF.nameInFile] = generateCorrectUB(lLimit, uLimit);
+   std::string olLimit = std::string();
+   std::string oSize = std::string();
+   generateCorrectUB(lLimit, uLimit, olLimit, oSize);
+    vctLower[nameF.nameInFile] = olLimit;
+    vctUpper[nameF.nameInFile] = oSize;
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(r, It->first);
     vctPtr[nameF.nameInFile] = It->first;
+    needR[nameF.nameInFile] = needPointerAddrToRestrict(It->first);
     //errs() << nameF.nameInFile << "\n" << lLimit << "\n" << uLimit << "\n\n" ;
     
     if (!isValid()) {
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
         " code for bounds of pointer: " << (nameF.nameInFile.empty() ?
         "<unable to recover pointer name>" : nameF.nameInFile) << "\n";
+      errs() << Line << "\n";
       return isValid();
     }
 
@@ -1450,7 +1595,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
       Rst.setTrueOMP();
 
     Rst.setName("RST_"+NAME);
-    Rst.getBounds(vctLower, vctUpper, vctPtr);
+    Rst.getBounds(vctLower, vctUpper, vctPtr, needR);
     result = Rst.generateTests(result);
 
     restric = Rst.isValid();

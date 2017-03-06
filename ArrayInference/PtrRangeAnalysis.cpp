@@ -24,6 +24,9 @@ STATISTIC(numAAA , "Number of analyzed arrays");
 
 static cl::opt<bool> Cllicm("Ptr-licm",                      
     cl::desc("Use loop invariant code motion in Pointer Range Analysis.")); 
+ 
+static cl::opt<bool> Clptru("Ptr-Unsafe",                      
+    cl::desc("Ignore unsafe function calls in Pointer Range Analysis.")); 
     
 static cl::opt<bool> Clregion("Ptr-region",                      
     cl::desc("Rebuild regions in Pointer Range Analysis")); 
@@ -228,6 +231,9 @@ void PtrRangeAnalysis::analyzeRegionPointers (Region *R,
 }
 
 bool PtrRangeAnalysis::isSafeCallInst (CallInst *CI) {
+  if (Clptru == true)
+    return true;
+
   if (CI->doesNotReturn())
     return false;
 

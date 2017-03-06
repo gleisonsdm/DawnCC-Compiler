@@ -157,8 +157,11 @@ double ConstantsSimplify::getConstantVector (
   return 0.0;
 }
 
-double ConstantsSimplify::getConstantFP (const ConstantFP *C) const {
-  return C->getValueAPF().convertToDouble();
+double ConstantsSimplify::getConstantFP (const ConstantFP *C) {
+  if (C->getValueAPF().isNormal())
+    return C->getValueAPF().convertToDouble();
+  setValidFalse();
+  return 0.0;
 }
 
 double ConstantsSimplify::getConstantPointerNull (ConstantPointerNull *C,

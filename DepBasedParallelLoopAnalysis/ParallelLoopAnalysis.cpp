@@ -84,8 +84,16 @@ void ParallelLoopAnalysis::inspectMemoryDependence(Dependence &D,
   }
 }
 
-void ParallelLoopAnalysis::checkRegisterDependencies(Loop *L)
-{
+void ParallelLoopAnalysis::checkRegisterDependencies(Loop *L) {
+  if (!isLoopSafetly(L)) {
+    CantParallelize.insert(L);
+
+    const std::vector<Loop *> &subLoops = L->getSubLoops();
+    for (auto SL : subLoops)
+      checkRegisterDependencies(SL);
+    return;
+  }
+
   BasicBlock *Header = L->getHeader();
   ConstantInt *Step = nullptr;
   bool hasBadPHI = false;
@@ -121,6 +129,62 @@ void ParallelLoopAnalysis::checkRegisterDependencies(Loop *L)
 
   for (auto SL : subLoops)
     checkRegisterDependencies(SL);
+}
+
+void ParallelLoopAnalysis::getPHIMAPS(Function *F,
+                                      std::map<PHINode*,bool> & PHIS) {
+  for (auto BB = F->begin(), BE = F->end(); BB != BE; BB++) {
+    Loop *L = this->LI->getLoopFor(BB);
+    if (!L)
+      continue;
+    if (L->getCanonicalInductionVariable())
+      PHIS[L->getCanonicalInductionVariable()] = true;
+  }
+}
+
+bool ParallelLoopAnalysis::checkPHIIndexDepRec(Value *V,
+                                               std::map<PHINode*,bool> & PHIS) {
+  if (!isa<Instruction>(V))
+    return true;
+
+  Instruction *I = cast<Instruction>(V);
+
+  if (PHINode *PN = dyn_cast<PHINode>(I))
+    return PHIS.count(PN);
+
+  for (unsigned int i = 0, ie = I->getNumOperands(); i != ie; i++) {
+    if (!checkPHIIndexDepRec(I->getOperand(i), PHIS))
+      return false;
+  }
+  return true;
+}
+
+bool ParallelLoopAnalysis::isLoopSafetly(Loop *L) {
+  // Check each Preheader.
+  std::map<PHINode*,bool> PHIS;
+  getPHIMAPS((*L->block_begin())->getParent(), PHIS);
+  if (L->getLoopPreheader()) {
+    for (auto I = L->getLoopPreheader()->begin(),
+         IE = L->getLoopPreheader()->end(); I != IE; I++) {
+      if (LoadInst *LD = dyn_cast<LoadInst>(I))
+        if(!checkPHIIndexDepRec(LD->getPointerOperand(), PHIS))
+          return false;
+      if (StoreInst *ST = dyn_cast<StoreInst>(I))
+        if (!checkPHIIndexDepRec(ST->getPointerOperand(), PHIS))
+          return false;
+    }
+  }
+  // Check for PHI Nodes on each loop.
+  for (auto BB = L->block_begin(), BE = L->block_end(); BB != BE; ++BB)
+    for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
+      if (LoadInst *LD = dyn_cast<LoadInst>(I))
+        if(!checkPHIIndexDepRec(LD->getPointerOperand(), PHIS))
+          return false;
+      if (StoreInst *ST = dyn_cast<StoreInst>(I))
+        if (!checkPHIIndexDepRec(ST->getPointerOperand(), PHIS))
+          return false;
+    }
+   return true;
 }
 
 bool ParallelLoopAnalysis::runOnFunction(llvm::Function &F) {

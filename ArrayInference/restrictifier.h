@@ -34,6 +34,8 @@ class Restrictifier {
     std::map<std::string, std::pair<std::string,std::string> > limits;
 
     std::map<std::string, Value*> pointers;
+
+    std::map<std::string, bool> needRef;
   
     std::string NAME;
   
@@ -74,7 +76,8 @@ class Restrictifier {
   // Identify bounds for pointers.
   void getBounds (std::map<std::string, std::string> & lowerB,
                   std::map<std::string, std::string> & upperB,
-                  std::map<std::string, Value*> pointersB);
+                  std::map<std::string, Value*> pointersB,
+                  std::map<std::string, bool> needR);
 
   // Return true case resul of restrictifier is true, else in other case.
   bool isValid ();

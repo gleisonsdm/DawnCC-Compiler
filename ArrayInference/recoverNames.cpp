@@ -114,12 +114,13 @@ const DILocalVariable *RecoverNames::findVar(const Value *V, const Function *F) 
 
 StringRef RecoverNames::getOriginalName(const Value *V) {
   const llvm::Function *F = findEnclosingFunc(V);
-  if (!F)
+  if (!F) {
     return "";
-
+  }
   const llvm::DILocalVariable *Var = findVar(V, F);
-  if (!Var)
+  if (!Var) {
     return "";
+  }
 
   return Var->getName();
 }

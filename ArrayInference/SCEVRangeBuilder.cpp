@@ -184,15 +184,49 @@ Value *SCEVRangeBuilder::visitMulExpr(const SCEVMulExpr *Expr, bool Upper) {
   if (!SC1 && !SC2) {
     Lhs = expand(Expr->getOperand(0), Upper);
     Rhs = expand(Expr->getOperand(1), Upper);
-    if (!Lhs || !Rhs)
+    Value *Lhs2 = expand(Expr->getOperand(0), !Upper);
+    Value *Rhs2 = expand(Expr->getOperand(1), !Upper); 
+    if (!Lhs || !Rhs || !Lhs2 || !Rhs2)
       return nullptr;
 
-    Lhs = InsertNoopCastOfTo(Lhs, Ty);
-    Rhs = InsertNoopCastOfTo(Rhs, Ty);
-    return InsertBinop(Instruction::Mul, Lhs, Rhs);
-  }
+    Value *Ref1 = InsertBinop(Instruction::Mul, Lhs, Rhs);
+    Value *Ref2 = InsertBinop(Instruction::Mul, Lhs2, Rhs);
+    Value *Ref3 = InsertBinop(Instruction::Mul, Lhs, Rhs2);
+    Value *Ref4 = InsertBinop(Instruction::Mul, Lhs2, Rhs2);
 
+    // If is a Upper bound, create the correct comparator
+    if (Upper) {
+      // Compare and Select Instructions:
+      Value *Ref5 = InsertICmp(CmpInst::ICMP_SGT, Ref1, Ref2);
+      Value *Ref6 = InsertICmp(CmpInst::ICMP_SGT, Ref3, Ref4);
+      
+      Value *Ref7 = InsertSelect(Ref5, Ref1, Ref2, "scmul1");
+      Value *Ref8 = InsertSelect(Ref6, Ref3, Ref4, "scmul2");
+
+      // Define the maximum:
+      Value *Ref9 = InsertICmp(CmpInst::ICMP_SGT, Ref7, Ref8);
+
+      Value *Ref10 = InsertSelect(Ref9, Ref7, Ref8, "scmul3");
+  
+      return Ref10;
+    } else {
+      // Compare and Select Instructions:
+      Value *Ref5 = InsertICmp(CmpInst::ICMP_SLT, Ref1, Ref2);
+      Value *Ref6 = InsertICmp(CmpInst::ICMP_SLT, Ref3, Ref4);
+      
+      Value *Ref7 = InsertSelect(Ref5, Ref1, Ref2, "scmul1");
+      Value *Ref8 = InsertSelect(Ref6, Ref3, Ref4, "scmul2");
+
+      // Define the minimum:
+      Value *Ref9 = InsertICmp(CmpInst::ICMP_SLT, Ref7, Ref8);
+
+      Value *Ref10 = InsertSelect(Ref9, Ref7, Ref8, "scmul3");
+   
+      return Ref10;
+    }
+  }
   return nullptr;
+
 }
 
 // This code is based on the visitUDiv code from SCEVExpander. We only
@@ -346,10 +380,10 @@ Value *SCEVRangeBuilder::visitSRemInst(const SCEVUnknown *Expr, bool Upper) {
   Value *Val = Expr->getValue();
   Instruction *Inst = dyn_cast<Instruction>(Val);
   
-  if (Inst->getOpcode() != Instruction::SRem || Inst->getNumOperands() != 2)
+  if ((Inst->getOpcode() != Instruction::SRem) || (Inst->getNumOperands() != 2))
     return nullptr;
+
   Value *V = Inst->getOperand(1);
-  
   // Just return the value if it is invariant.
   if (!isInvariant(V, R, LI, AA))
     return nullptr;
@@ -373,8 +407,9 @@ Value *SCEVRangeBuilder::visitUnknown(const SCEVUnknown *Expr, bool Upper) {
   BasicBlock::iterator InsertPt = getInsertPoint();
 
   // The value must be a region parameter.
-  if (!isInvariant(Val, R, LI, AA))
+  if (!isInvariant(Val, R, LI, AA)) {
     return visitSRemInst(Expr, Upper);
+  }
   
   // To be used in range computation, the instruction must be available at the
   // insertion point.
