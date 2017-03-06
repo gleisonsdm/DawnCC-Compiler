@@ -361,7 +361,8 @@ void ScopeTree::printData () {
 
 void ScopeTree::associateLoopstoRegion (std::map<Loop*, STnode> & Loops,
                                         Region *R) {
- 
+  if (!R) 
+    return;
   for (auto BB = R->block_begin(), BE = R->block_end(); BB != BE; BB++) {
     Loop *L = li->getLoopFor(*BB);
     if (!L || Loops.count(L))
@@ -432,6 +433,8 @@ std::pair<unsigned int, unsigned int> ScopeTree::getEndRegionLoops (Region *R) {
 }
   
 bool ScopeTree::isSafetlyRegionLoops (Region *R) {
+  if (!R)
+    return false;
   std::map<Loop*, STnode> Loops;
   associateLoopstoRegion (Loops, R);
   Function *F = R->getEntry()->getParent();

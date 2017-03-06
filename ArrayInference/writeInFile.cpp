@@ -101,7 +101,8 @@ std::string WriteInFile::getLineForIns(Value *V) {
 }
 
 void WriteInFile::addCommentToLine(std::string Comment, unsigned int Line) {
-  Comments[Line] = Comment;
+  if (Line != 1)
+    Comments[Line] = Comment;
 }
 
 void WriteInFile::printToFile(std::string Input, std::string Output) {
