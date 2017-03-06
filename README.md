@@ -1,4 +1,8 @@
-# DawnCC - A Source to Source Compiler 
+# DawnCC - A Source to Source Compiler for Parallelizing C/C++ Programs with Code Annotation
+
+[Project Webpage](http://cuda.dcc.ufmg.br/dawn)
+
+[Code Repository](https://github.com/gleisonsdm/DawnCC-Compiler/)
 
 ## Introduction
 
@@ -14,7 +18,7 @@ Amongst the hurdles involved in annotating code, two tasks are particularly chal
 
 We have developed DawnCC as a tool to automate the performance of these tasks. Through the implementation of a static analysis that derives memory access bounds from source code, it infers the size of memory regions in C and C++ programs. With these bounds, it is capable of inserting data copy directives in the original source code. These directives provide a compatible compiler with information on which data must be moved between devices. Given the source code of a program as input, our tool can then provide the user with a modified version containing directives with proper memory bounds specified, all without any further intervention from the user, effectively freeing developers from the burdensome task of manual code modification. 
 
-We implemented DawnCC as a collection of compiler modules, or passes, for the LLVM compiler infrastructure, with this webpage functioning as a front-end for users to provide program source codes as input. The program is then compiled by LLVM and transformed by our passes to produce the modified source code as output to the webpage user. There are also a few options to customize the output, such as printing runtime statistics.
+We implemented DawnCC as a collection of compiler modules, or passes, for the LLVM compiler infrastructure, whose code is available in this repository.
 
 ## Functionality
 
@@ -29,6 +33,16 @@ Compiler directive-oriented programming standards are some of the newest develop
 In order to use these standards to offload execution to accelerators, it is necessary to compile the modified source code with a compiler that supports the given directive standard (OpenMP 4.0 or OpenACC). In our internal testing environment, we use Portland Group's C Compiler for OpenACC support. You can find out more about it in the following link:
 
 [Portland Group](http://www.pgroup.com/index.htm)
+
+There are other compilers that provide support for OpenACC or OpenMP 4.0, either as fully-supported features or as experimental implementations. Below is a small list of such compilers:
+
+[OpenMP Clang](http://openmp.llvm.org/) - The OpenMP runtime Clang implementation has been officially moved to an LLVM subproject. Currently supports offloading to accelerators using OpenMP 4.0 directives.
+
+[GCC 5+](https://gcc.gnu.org/wiki/openmp) - Starting from version 5.0, GCC provides support for computation offloading through OpenMP 4.0 directives.
+
+[Pathscale](http://www.pathscale.com/) - Pathscale's EKOPath compiler suite supposedly supports offloading with OpenMP 4.0+, as well as other annotation standards.
+
+Note that, since most implementations are premiliminary and tend to change considerably, the annotation syntax inserted by DawnCC, while standard compliant, might not be fully compatible with each compiler's implementation. If you attempt to use a compiler that provides support for these standards but does not compile the annotation format DawnCC uses, we would appreciate knowing about it!
 
 ## Installation
 
