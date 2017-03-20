@@ -159,7 +159,7 @@ double ConstantsSimplify::getConstantVector (
 
 double ConstantsSimplify::getConstantFP (const ConstantFP *C) {
   if (C->getValueAPF().isNormal())
-    return C->getValueAPF().convertToDouble();
+    return (double)(C->getValueAPF().convertToFloat());
   setValidFalse();
   return 0.0;
 }
@@ -347,6 +347,31 @@ Type* ConstantsSimplify::getInternalType (Type *tpy, int position,
   if (tpy->getTypeID() == Type::PointerTyID)
     return tpy->getPointerElementType();
   return tpy;
+}
+
+long long int ConstantsSimplify::getFullSizeType(Type *tpy, const DataLayout *DT) {
+  long long int result = 0;
+  // Return basic types:
+  if ((Type::ArrayTyID != tpy->getTypeID()) && 
+      (Type::PointerTyID != tpy->getTypeID())) {
+    tpy->dump();
+    errs() << "Trying == " << getSizeToTypeInBits(tpy, DT) << "\n";
+    return getSizeToTypeInBits(tpy, DT);
+  }
+  // Return all possible dependences:
+  for (unsigned int i = 0; i < tpy->getNumContainedTypes(); i++) {
+    if (ArrayType *atpy = dyn_cast<ArrayType>(tpy->getContainedType(i))) {
+      //errs() << "E = " << std::to_string(atpy->getArrayNumElements()) << "\n";
+      //errs() << "X = " << std::to_string(getFullSizeType(atpy, DT)) << "\n";
+      atpy->dump();
+      errs() << "NUM = " << atpy->getArrayNumElements() << "\n";
+      result += getFullSizeType(atpy, DT) * atpy->getArrayNumElements();
+    }
+    else {
+      result += getFullSizeType(tpy->getContainedType(i), DT);
+    }
+  }
+  return result;
 }
 //===---------------------------- ConstantsSimplify.cpp -------------------===// 
 

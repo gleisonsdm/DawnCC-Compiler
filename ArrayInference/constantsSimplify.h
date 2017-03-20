@@ -94,6 +94,9 @@ class ConstantsSimplify {
 
   // Return true if is possible convert LLVM's constant to number.
   bool isValid ();
+
+  // Return a correct Type size, if possible.
+  long long int getFullSizeType(Type *tpy, const DataLayout *DT);
   
 };// End of ConstantsSimplify class
 

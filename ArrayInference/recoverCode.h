@@ -150,6 +150,14 @@ class RecoverCode {
   std::string getIndextoGEP (GetElementPtrInst*  GEP, std::string name, int *var,
                 const DataLayout* DT);
 
+  // Return if is possible recover the static size to the Pointer "V":
+  bool isPointerMD(Value *V);
+
+  // Provide the correct pointer computation to build the correct code.
+  // Works for Loads and Stores.
+  std::string getPointerMD (Value *V, std::string name, int *var,
+                            const DataLayout* DT);
+
   // Return the subType of Type tpy. Look at this example:
   //   [1000 * i32]
   // The return is position * 4 (value in bytes)
@@ -161,7 +169,7 @@ class RecoverCode {
   // Return the Expression value converted to the position of the array of
   // "Pointer"
   std::string getAccessExpression (Value* Pointer, Value* Expression,
-                                  const DataLayout* DT);
+                                  const DataLayout* DT, bool upper);
 
   // Generate pragmas to data transference between devices, using loop context.
   std::string getDataPragma (std::map<std::string, std::string> & vctLower,

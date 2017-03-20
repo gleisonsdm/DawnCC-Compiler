@@ -411,6 +411,9 @@ bool RecoverExpressions::runOnFunction(Function &F) {
   this->ptrRa = &getAnalysis<PtrRangeAnalysis>();
   //this->tm = &getAnalysis<TaskMiner>();
 
+  if (F.isDeclaration() || F.isIntrinsic())
+    return true;
+
   index = 0;
   if (ClRegionTask == true)
     analyzeRegion(this->rp->getRegionInfo().getTopLevelRegion());   

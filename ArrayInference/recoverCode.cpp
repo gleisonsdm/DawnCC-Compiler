@@ -31,6 +31,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <fstream>
+#include <queue>
 
 #include "llvm/IR/DIBuilder.h" 
 #include "llvm/IR/Module.h"
@@ -859,7 +860,7 @@ long long int RecoverCode::getSumofTypeSize (Type* TPY, int position,
 // referenced array of this GEP.
 std::string RecoverCode::getIndextoGEP (GetElementPtrInst*  GEP,
                                 std::string name,
-                                int* var, const DataLayout* DT) {
+                                int* var, const DataLayout* DT) { 
   ConstantsSimplify CS;
   long long int value = 0, sum = 0;
   std::string exp = std::string();
@@ -1093,7 +1094,7 @@ bool RecoverCode::isValidPointer (Value *Pointer, const DataLayout* DT) {
 
 // Return a string with the access Expression to the pointer.
 std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
-                                             const DataLayout* DT) {
+                                             const DataLayout* DT, bool upper) {
   int var = -1, number = 0;
   RecoverNames::VarNames nameF = rn->getNameofValue(Pointer);
 
@@ -1107,7 +1108,6 @@ std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
   }
 
   if (!isValidPointer(Pointer, DT)) {
-    Pointer->dump();
     setValidFalse();
     return std::string();
   }
@@ -1124,8 +1124,16 @@ std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
   subExp1 = std::to_string(size) + " * ";
   subExp2 = " * " +  std::to_string(size) + ";\n";
   
-  expression = getAccessString(Expression, nameF.nameInFile, &var, DT);
+  // Provide 2 or more dimmentional arrays representation.
+  if (isPointerMD(Pointer)) {
+    if (!upper)
+      return std::to_string(0);
+    else
+      return getPointerMD(Pointer, nameF.nameInFile, &var, DT);
+  }
 
+  expression = getAccessString(Expression, nameF.nameInFile, &var, DT);
+  
   if (var == -1) {
     long long int num = -1;
     if (TryConvertToInteger(expression, &num))
@@ -1399,6 +1407,23 @@ bool RecoverCode::needPointerAddrToRestrict(Value *V) {
   return false;
 }
 
+bool RecoverCode::isPointerMD(Value *V) {
+  if (!isa<AllocaInst>(V))
+    return false;
+  return true;
+}
+
+std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
+                            const DataLayout* DT) {
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+    std::string result =  getAccessString(AI->getArraySize(),name, var, DT);    
+    if (*var != -1)
+      result = NAME + "[" + std::to_string(*var) + "]";
+    return result;
+  }
+  return std::string();
+}
+
 bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
                                         PtrRangeAnalysis *ptrRA, 
                                         RegionInfoPass *rp, AliasAnalysis *aa,
@@ -1449,9 +1474,9 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
     
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
     std::string lLimit = getAccessExpression(It->first, It->second.first,
-        &DT);
+        &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
-        &DT);
+        &DT, true);
    
     std::string olLimit = std::string();
     std::string oSize = std::string();
@@ -1558,9 +1583,9 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
      
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
     std::string lLimit = getAccessExpression(It->first, It->second.first,
-        &DT);
+        &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
-        &DT);
+        &DT, true);
    std::string olLimit = std::string();
    std::string oSize = std::string();
    generateCorrectUB(lLimit, uLimit, olLimit, oSize);
@@ -1570,7 +1595,6 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
     vctPtr[nameF.nameInFile] = It->first;
     needR[nameF.nameInFile] = needPointerAddrToRestrict(It->first);
     //errs() << nameF.nameInFile << "\n" << lLimit << "\n" << uLimit << "\n\n" ;
-    
     if (!isValid()) {
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
         " code for bounds of pointer: " << (nameF.nameInFile.empty() ?

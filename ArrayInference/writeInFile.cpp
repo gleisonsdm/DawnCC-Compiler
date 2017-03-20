@@ -209,7 +209,8 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
       continue;
   }
 
-  if (F->isDeclaration() || F->isIntrinsic()) {
+  if (F->isDeclaration() || F->isIntrinsic() ||
+      F->hasAvailableExternallyLinkage()) {
      continue;
   }
 
@@ -224,7 +225,7 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
     Comments.erase(Comments.begin(), Comments.end());
   }
 
-  if (ClRun) {
+  if (ClRun == true) {
     this->re = &getAnalysis<RecoverExpressions>(*F);
     copyComments(this->re->Comments);
   }

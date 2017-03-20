@@ -105,6 +105,8 @@ class RecoverExpressions : public FunctionPass {
   //                              Data Structs
   //===---------------------------------------------------------------------===
    std::map<unsigned int, std::string> Comments;
+
+   bool isNeed;
   //===---------------------------------------------------------------------===
 
   static char ID;
