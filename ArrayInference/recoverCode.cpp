@@ -1107,6 +1107,14 @@ std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
     return std::string();
   }
 
+  // Provide 2 or more dimmentional arrays representation.
+  if (isPointerMD(Pointer)) {
+    if (!upper)
+      return std::to_string(0);
+    else
+      return getPointerMD(Pointer, nameF.nameInFile, &var, DT);
+  }
+
   if (!isValidPointer(Pointer, DT)) {
     setValidFalse();
     return std::string();
@@ -1124,14 +1132,6 @@ std::string RecoverCode::getAccessExpression (Value* Pointer, Value* Expression,
   subExp1 = std::to_string(size) + " * ";
   subExp2 = " * " +  std::to_string(size) + ";\n";
   
-  // Provide 2 or more dimmentional arrays representation.
-  if (isPointerMD(Pointer)) {
-    if (!upper)
-      return std::to_string(0);
-    else
-      return getPointerMD(Pointer, nameF.nameInFile, &var, DT);
-  }
-
   expression = getAccessString(Expression, nameF.nameInFile, &var, DT);
   
   if (var == -1) {
@@ -1416,9 +1416,33 @@ bool RecoverCode::isPointerMD(Value *V) {
 std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
                             const DataLayout* DT) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    std::string result =  getAccessString(AI->getArraySize(),name, var, DT);    
-    if (*var != -1)
-      result = NAME + "[" + std::to_string(*var) + "]";
+    AI->dump();
+    AI->getArraySize()->dump();
+    std::string result =  getAccessString(AI->getArraySize(),name, var, DT);
+    ConstantsSimplify CS;
+    long long int size = CS.getFullSizeType(AI->getType(), DT);
+    size = size / getSizeToValue(AI, DT);
+    if (*var != -1) {
+      if (size != 1) {
+        result = "(" + NAME + "[" + std::to_string(*var) + "]";
+        result += " / " + std::to_string(size) + ")";
+      }
+      else {
+        result = NAME + "[" + std::to_string(*var) + "]";
+      }
+    }
+    else {
+      long long int num = 0;
+      if (!TryConvertToInteger(result, &num)) {
+         errs() << "RESULT = " << result << "\n";
+        setValidFalse();
+        return std::string();
+      }
+      if (num == 1)
+        result = std::to_string((size));
+      else
+        result = std::to_string((num + size));
+    }
     return result;
   }
   return std::string();
