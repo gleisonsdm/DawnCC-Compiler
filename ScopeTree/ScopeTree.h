@@ -63,7 +63,7 @@ class ScopeTree : public FunctionPass {
     // uses the same node.
     // The information is present in a tuple < child, parent >.
     std::map<unsigned int, unsigned int> parents;
-    unsigned int n_nodes;
+    int n_nodes;
     
     // Store the name of the file, such as an id of this graph.
     std::string file;
@@ -121,6 +121,9 @@ class ScopeTree : public FunctionPass {
 
   // Associate a loop with available information, case possible.
   void associateLoop (Loop *L);
+
+  // Return the name of the function in the source file.
+  std::string getFunctionNameDBG(Function *F);
 
   // Associate a Function with available information, case possible.
   void associateFunction (Function *F);

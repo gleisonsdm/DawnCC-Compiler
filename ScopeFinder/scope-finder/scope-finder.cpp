@@ -264,6 +264,11 @@ public:
           return true;
         }
 
+		/*ignore declarations without definitions (they don't have a scope)*/
+		if (!D->isThisDeclarationADefinition()) {
+			return true;
+		}
+
         string filename = mng.getFilename(D->getLocStart());
 
         if (FileStack.empty() || FileStack.top().filename != filename) {

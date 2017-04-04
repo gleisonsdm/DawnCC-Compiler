@@ -1,4 +1,4 @@
-//===---------------------------- ScopeTree.cpp --------------------------===//
+//===---------------------------- tcopeTree.cpp --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -306,12 +306,16 @@ void ScopeTree::associateLoop (Loop *L) {
 
 void ScopeTree::associateFunction (Function *F) {
   Module *M = F->getParent();
-  if (!info.count(M) || funcNodes.count(F))
+  if (!info.count(M) || funcNodes.count(F)) {
     return;
+  }
 
+  std::string name = getFunctionNameDBG(F);
+  
+  //std::string name = (F->getSubprogram())->getName();
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++)
     for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++) {
-      if (F->getName() == J->second.name) {
+      if (name == J->second.name) {
         funcNodes[F] = J->second;
         return;
       }
@@ -359,10 +363,30 @@ void ScopeTree::printData () {
   }
 }
 
+std::string ScopeTree::getFunctionNameDBG(Function *F) {
+  std::string name = F->getName();
+  Module *M = F->getParent();
+  NamedMDNode *MD = M->getNamedMetadata("llvm.dbg.cu");
+  if (MD) {
+    for (NamedMDNode::op_iterator Op = MD->op_begin(), Ope = MD->op_end();
+         Op != Ope; ++Op) {
+      MDNode* ND = *(Op);
+      if (DICompileUnit *CU = dyn_cast<DICompileUnit>(ND)) {
+        DISubprogramArray DG = CU->getSubprograms();
+        for (auto I = DG.begin(), IE = DG.end(); I != IE; ++I) { 
+          if (DISubprogram *SP = dyn_cast<DISubprogram>(*I)) { 
+            if (SP->getLinkageName() == F->getName())
+              name = SP->getName();
+          }
+        }
+      }
+    }
+  }
+  return name;
+}
+
 void ScopeTree::associateLoopstoRegion (std::map<Loop*, STnode> & Loops,
                                         Region *R) {
-  if (!R) 
-    return;
   for (auto BB = R->block_begin(), BE = R->block_end(); BB != BE; BB++) {
     Loop *L = li->getLoopFor(*BB);
     if (!L || Loops.count(L))
@@ -380,14 +404,15 @@ ScopeTree::Graph ScopeTree::findGraph (Region *R) {
   // Find the Top region node to start the search, and the respective graph.
   STnode node;
   Graph gph;
+  gph.n_nodes = -1;
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++) {
     for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++) {
-      if (J->second.name != F->getName())
+      if (J->second.name != getFunctionNameDBG(F))
         continue;
       node = J->second;
       break;
     }
-    if (node.name == F->getName()) {
+    if (node.name == getFunctionNameDBG(F)) {
       gph = *I;
       break;
     }
@@ -433,20 +458,19 @@ std::pair<unsigned int, unsigned int> ScopeTree::getEndRegionLoops (Region *R) {
 }
   
 bool ScopeTree::isSafetlyRegionLoops (Region *R) {
-  if (!R)
-    return false;
   std::map<Loop*, STnode> Loops;
   associateLoopstoRegion (Loops, R);
   Function *F = R->getEntry()->getParent();
   Module *M = F->getParent();
   
   // Find the Top region node to start the search, and the respective graph.
-  if (!funcNodes.count(F)) {
+  if (!funcNodes.count(F)) {   
     return false;
   }
   STnode node = funcNodes[F];
   Graph gph = findGraph(R);
-
+  if (gph.n_nodes == -1)
+    return false;
   std::queue<unsigned int> toIterate;
   toIterate.push(node.id);
   std::vector<unsigned int> nodeLevel(gph.n_nodes, DEFVAL);
@@ -511,6 +535,7 @@ bool ScopeTree::isSafetlyRegionLoops (Region *R) {
       }
     }
   }
+
 
   // If exists a loop that is not present in the vector "safety",
   // this information cannot be used to insert code in the original
