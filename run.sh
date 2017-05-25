@@ -106,6 +106,7 @@ fi
 cd ${FILES_FOLDER}
 
 for f in $(find . -name '*.c' -or -name '*.cpp'); do 
+
     $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i ${f}
 
     $CLANG -Xclang -load -Xclang $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only ${f}
@@ -122,8 +123,9 @@ for f in $(find . -name '*.c' -or -name '*.cpp'); do
       -Memory-Coalescing=${MEMORY_COALESCING_BOOL} -Ptr-licm=${MINIMIZE_ALIASING_BOOL} -Ptr-region=${CODE_CHANGE_BOOL} \
       -Run-Mode=false ${TEMP_FILE2} -o ${TEMP_FILE3}
 
-    #$CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i "${f}"
+    $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i "${f}"
 done
 
 cd ${CURRENT_DIR}
+
 

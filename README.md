@@ -92,7 +92,7 @@ Or you can build it manually by downloading [LLVM](http://llvm.org/releases/3.7.
 
 ## How to run a code
 
-To run DawnCC, you can run the run.sh bash script, passing as arguments the directory which llvm-build and DawnCC are located and a directory containing source files to be processed (currently single level folder, not recursive). Arguments can be passed in command line to change behaviour of the script.
+To run DawnCC, you can run the run.sh bash script, passing as arguments the directory which llvm-build and DawnCC are located and a directory containing source files to be processed. Arguments can be passed in command line to change behaviour of the script.
     
     ./run.sh -d <root folder> -src <folder with files to be processed> 
 
