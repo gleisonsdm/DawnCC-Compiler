@@ -78,8 +78,10 @@ fi
 #Create output folder for LLVM
 mkdir ${LLVM_OUTPUT_DIR}
 
-#Setup LLVM+Clang and plugins
-${DAWN_PATH}/ScopeFinder/setup.sh
+#Setup LLVM+Clang and scope-finder plugin
+mkdir -p ${LLVM_SRC}/tools/clang/tools/extra
+echo "add_subdirectory(scope-finder)" > ${LLVM_SRC}/tools/clang/tools/extra/CMakeLists.txt
+cp -rf ${DAWN_PATH}/ScopeFinder/scope-finder ${LLVM_SRC}/tools/clang/tools/extra/.
 
 #Create setup with cmake
 cd ${LLVM_OUTPUT_DIR}
