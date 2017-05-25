@@ -50,9 +50,7 @@ The project is structured as a set of dynamically loaded libraries/passes for LL
 
 You can download and build both LLVM/Clang and DawnCC using the following the [bash script](https://github.com/gleisonsdm/DawnCC-Compiler/blob/master/build.sh) on the folder you want the source to be downloaded and built. You will need CMake, wget, unzip, tar and a toolchain to run it.
 
-Or you can build it manually by doing the following:
-
-    Download [LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz) and [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz).
+Or you can build it manually by downloading [LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz) and [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz), then:
 
     Extract their contents to llvm and llvm/tools/clang.
 
