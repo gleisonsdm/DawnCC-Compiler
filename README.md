@@ -48,7 +48,49 @@ Note that, since most implementations are premiliminary and tend to change consi
 
 The project is structured as a set of dynamically loaded libraries/passes for LLVM that can be built separately from the main compiler. However, an existing LLVM build (compiled using cmake) is necessary to build our code. 
 
-To download and build both LLVM/Clang and DawnCC, download and run only the [bash script](https://github.com/Gabrielcarvfer/DawnCC-Compiler/blob/master/build.sh) on the folder you want the source to be downloaded and built. You will need CMake, wget, unzip, tar and a toolchain to run it.
+You can download and build both LLVM/Clang and DawnCC using the following the [bash script](https://github.com/gleisonsdm/DawnCC-Compiler/blob/master/build.sh) on the folder you want the source to be downloaded and built. You will need CMake, wget, unzip, tar and a toolchain to run it.
+
+Or you can build it manually by doing the following:
+
+Download [LLVM](http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz) and [Clang](http://llvm.org/releases/3.7.0/cfe-3.7.0.src.tar.xz).
+
+Extract their contents to llvm and llvm/tools/clang.
+
+Download the DawnCC source and apply the patch "llvm-patch.diff" to your LLVM source directory, that is located in 'ArrayInference/llvm-patch.diff'.
+
+After applying the diff, we can move on to compiling a fresh LLVM+Clang 3.7 build. To do so, you can follow these outlines:
+
+	MAKEFLAG="-j8"
+  
+ 	LLVM_SRC=<path-to-llvm-source-folder>
+	REPO=<path-to-dawncc-repository>
+
+	#We will build a debug version of LLVM+Clang under ${LLVM_SRC}/../llvm-build
+	mkdir ${LLVM_SRC}/../llvm-build
+	cd ${LLVM_SRC}/../llvm-build
+
+	#Setup clang plugins to be compiled alongside LLVM and Clang
+	${REPO}/src/ScopeFinder/setup.sh
+
+	#Create build setup for LLVM+Clang using CMake
+	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
+	
+	#Compile LLVM+Clang (this will likely take a while)
+	make ${MAKEFLAG}
+	cd -
+
+After you get a fresh LLVM build under ${LLVM_BUILD_DIR}, the following commands can be used to build DawnCC:
+
+	LLVM_BUILD_DIR=<path-to-llvm-build-folder> 	
+	REPO=<path-to-repository>
+
+ 	# Build the shared libraries under ${REPO}/lib, assumming an existing LLVM
+ 	# build under ${LLVM_BUILD_DIR}
+ 	mkdir ${REPO}/lib
+ 	cd ${REPO}/lib
+ 	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
+ 	make
+	cd -
 
 ## How to run a code
 
