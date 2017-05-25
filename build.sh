@@ -52,8 +52,15 @@ fi
 
 
 #If downloaded tarballs were not extracted, then extract
+if [ ! -d "${DAWN_PATH}" ]; then
+    unzip "${DAWN_SRC_FILE}" 
+    mv "${ROOT_FOLDER}/${DAWN_SRC_FILE%%.*}" "${DAWN_PATH}"
+fi
+
 if [ ! -d "${LLVM_SRC}" ]; then
-    tar -Jxf "llvm-${LLVM_VER}.src.tar.xz"
+    mkdir "${LLVM_SRC}"
+    tar -Jxf "llvm-${LLVM_VER}.src.tar.xz" -C "${LLVM_SRC}" --strip 1
+
 
     #Apply DawnCC patch into LLVM source
     cd "${LLVM_SRC}"
@@ -66,9 +73,7 @@ if [ ! -d "${CLANG_SRC}" ]; then
     tar -Jxf "cfe-${CLANG_VER}.src.tar.xz" -C "${CLANG_SRC}" --strip 1 #extract clang tarball to llvm/tools folder
 fi
 
-if [ ! -d "${DAWN_PATH}" ]; then
-    unzip "${DAWN_SRC_FILE}"
-fi
+
 
 #Create output folder for LLVM
 mkdir ${LLVM_OUTPUT_DIR}
