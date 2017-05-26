@@ -986,6 +986,7 @@ unsigned int RecoverCode::getSizeToValue (Value *V,
                                                    const DataLayout *DT) {
   if (V)
     return getSizeToType(V->getType(),DT);
+
   setValidFalse();
   return 0; 
 }
@@ -1028,6 +1029,10 @@ unsigned int RecoverCode::getSizeToType (Type *tpy,
     break;
     case Type::StructTyID: { 
       StructType *ST = cast<StructType>(tpy);
+      if (ST->isOpaque()) {
+        setValidFalse();
+        return 0;
+      }
       const StructLayout *SL = DT->getStructLayout(ST);
       return SL->getSizeInBits();
     }

@@ -144,6 +144,19 @@ class PtrRangeAnalysis : public FunctionPass {
   // Return if the CallInst is safe to try do the analysis.
   bool isSafeCallInst (CallInst *CI);
 
+  // Change the type of all instructions and remove the uses of sext of IR.
+  void promoteTypeandRemoveUsesSext (SExtInst *SI, Value *V,
+                                     std::map<Value*,Type*> & used);
+
+  // Change the type of all instructions and remove the uses of zext of IR.
+  void promoteTypeandRemoveUsesZext (ZExtInst *ZI, std::map<Value*,Type*> & used);
+
+  // Change the type of all instructions and return the uses of sext of IR.
+  void promoteTypeandReturnSext (SExtInst *SI, std::map<Value*,Type*> & used);
+
+  // Change the type of all instructions and return the uses of zext of IR.
+  void promoteTypeandReturnZext (ZExtInst *ZI, std::map<Value*,Type*> & used);
+
   // Modify the loop, when some Instruction present in this loop is not
   // affected by tripcount, this funciton move the instruction before
   // the loop.

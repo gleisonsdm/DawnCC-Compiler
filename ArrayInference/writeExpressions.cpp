@@ -258,25 +258,25 @@ void WriteExpressions::regionIdentify (Region *R) {
   // the pragmas here.
   // Here, we will know the loop those region.
   Loop *l = li->getLoopFor(*(R->block_begin()));
-  
+
   if (!l || (!isLoopParallel(l) && ClEmitParallel)) {
     for (auto SR = R->begin(), SRE = R->end(); SR != SRE; ++SR)
       regionIdentify(&(**SR));
     return;
   }
-   
+
   if (!isLoopAnalyzable(l) || !st->isSafetlyRegionLoops(R)) {
     for (auto SR = R->begin(), SRE = R->end(); SR != SRE; ++SR)
       regionIdentify(&(**SR));
     return;
   }
-  
+
   marknumAL(l);
 
   int line = l->getStartLoc().getLine();
   if (line == ERROR_VALUE)
     return;
-  
+
   NewVars++;
   std::string computationName = std::string();
   computationName = "AI" + std::to_string(NewVars);
@@ -289,7 +289,6 @@ void WriteExpressions::regionIdentify (Region *R) {
   // Variable to know the if the restrict pragma exists.
   // Case exists, use to add the test on pragmas.
   std::string test;
-
   if (RC.analyzeLoop(l, line, ERROR_VALUE, ptrRA, rp, aa, se, li, dt, test)) {
    
     copyComments(RC.Comments);
