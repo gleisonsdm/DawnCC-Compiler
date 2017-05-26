@@ -132,7 +132,7 @@ public:
       }
 
       currFile.edges += 
-	to_string(currFile.NodeStack.top().id)+" -- "+to_string(N.id)+"\n";
+        to_string(currFile.NodeStack.top().id)+" -- "+to_string(N.id)+"\n";
 
       /*push node to top of stack, making it our current "parent candidate"*/
       currFile.NodeStack.push(N);
@@ -146,7 +146,7 @@ public:
         FullSourceLoc StartLocation = astContext->getFullLoc(st->getLocStart());
         FullSourceLoc EndLocation = astContext->getFullLoc(st->getLocEnd());
 
-        if (StartLocation.isValid() == false) {
+        if (!StartLocation.isValid() || !EndLocation.isValid()) {
           N.sline = -1;
           return N;
         }
@@ -174,7 +174,7 @@ public:
         FullSourceLoc StartLocation = astContext->getFullLoc(D->getLocStart());
         FullSourceLoc EndLocation = astContext->getFullLoc(D->getLocEnd());
 
-        if (StartLocation.isValid() == false) {
+        if (!StartLocation.isValid() || !EndLocation.isValid()) {
           N.sline = -1;
           return N;
         }
@@ -264,7 +264,6 @@ public:
           return true;
         }
 
-		/*ignore declarations without definitions (they don't have a scope)*/
 		if (!D->isThisDeclarationADefinition()) {
 			return true;
 		}
