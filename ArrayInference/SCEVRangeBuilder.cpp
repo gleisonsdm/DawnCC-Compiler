@@ -280,6 +280,8 @@ Value *SCEVRangeBuilder::visitAddRecExpr(const SCEVAddRecExpr *Expr,
   if (!Upper)
     return expand(Expr->getStart(), /*Upper*/ false);
 
+  errs() << "Now is\n";
+  Expr->dump();
   // upper.
   // Cast all values to the effective start value type.
   Type *OpTy = SE->getEffectiveSCEVType(Expr->getStart()->getType());
@@ -296,8 +298,10 @@ Value *SCEVRangeBuilder::visitAddRecExpr(const SCEVAddRecExpr *Expr,
     BEdgeCountSCEV = SE->getBackedgeTakenCount(L);
   else if (ArtificialBECounts.count(L))
     BEdgeCountSCEV = ArtificialBECounts[L];
-  else
+  else {
+    errs() << "Bug 1\n"; 
     return nullptr;
+  }
 
   BEdgeCountSCEV = SE->getTruncateOrSignExtend(BEdgeCountSCEV, OpTy);
   Value *Start = expand(StartSCEV, Upper);
@@ -415,7 +419,7 @@ Value *SCEVRangeBuilder::visitUnknown(const SCEVUnknown *Expr, bool Upper) {
   // insertion point.
   if (Inst && !DT->dominates(Inst, InsertPt))
     return visitSRemInst(Expr, Upper);
-
+  
   return Val;
 }
 
@@ -519,7 +523,8 @@ bool SCEVRangeBuilder::canComputeBoundsFor(const SCEV *Expr) {
       expand(Expr, /*Upper*/ false) && expand(Expr, /*Upper*/ true);
 
   setAnalysisMode(false);
-  
+  if (!CanComputeBounds)
+    Expr->dump();  
   return CanComputeBounds;
 }
 

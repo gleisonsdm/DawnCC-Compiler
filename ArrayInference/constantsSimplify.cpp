@@ -158,8 +158,10 @@ double ConstantsSimplify::getConstantVector (
 }
 
 double ConstantsSimplify::getConstantFP (const ConstantFP *C) {
-  if (C->getValueAPF().isNormal())
+  if (C->getValueAPF().isNormal() && (C->getType()->isFloatTy()))
     return (double)(C->getValueAPF().convertToFloat());
+  if (C->getValueAPF().isNormal() && C->getType()->isDoubleTy())
+    return (double)(C->getValueAPF().convertToDouble());
   setValidFalse();
   return 0.0;
 }
@@ -314,6 +316,10 @@ unsigned int ConstantsSimplify::getSizeToTypeInBits (Type *tpy,
     break;
     case Type::StructTyID: {
       StructType *ST = cast<StructType>(tpy);
+      if (ST->isOpaque()) {
+        setValidFalse();
+        return 0;
+      }
       const StructLayout *SL = DT->getStructLayout(ST);
       return SL->getSizeInBits();
     }

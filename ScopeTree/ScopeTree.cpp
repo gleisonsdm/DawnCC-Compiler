@@ -310,7 +310,7 @@ void ScopeTree::associateFunction (Function *F) {
     return;
   }
 
-  std::string name = getFunctionNameDBG(F);
+  std::string name = F->getName();
   
   //std::string name = (F->getSubprogram())->getName();
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++)
@@ -407,12 +407,12 @@ ScopeTree::Graph ScopeTree::findGraph (Region *R) {
   gph.n_nodes = -1;
   for (auto I = info[M].begin(), IE = info[M].end(); I != IE; I++) {
     for (auto J = I->list.begin(), JE = I->list.end(); J != JE; J++) {
-      if (J->second.name != getFunctionNameDBG(F))
+      if (J->second.name != F->getName())
         continue;
       node = J->second;
       break;
     }
-    if (node.name == getFunctionNameDBG(F)) {
+    if (node.name == F->getName()) {
       gph = *I;
       break;
     }

@@ -367,6 +367,41 @@ bool lge::insertOperandsRec(Instruction *I, Loop *L,
   return true;
 }
 
+void PtrRangeAnalysis::promoteTypeandRemoveUsesSext (SExtInst *SI, Value *V,
+                                                std::map<Value*,Type*> & used) {
+  if (used.count(V))
+    return;
+  if (!used.count(SI)) {
+    if (SI->getNumOperands() != 1) 
+      return;
+    used[SI->getOperand(0)] = SI->getOperand(0)->getType();
+    promoteTypeandRemoveUsesSext(SI, SI->getOperand(0), used);
+    SI->replaceAllUsesWith(SI->getOperand(0));
+  }
+  if (V) {
+    if (!isa<Instruction>(V))
+      return;
+    Instruction *I = cast<Instruction>(V);
+    for (unsigned int i = 0; i < I->getNumOperands(); i++) {
+      used[I->getOperand(i)] = I->getOperand(i)->getType();
+      I->getOperand(i)->mutateType(SI->getDestTy());
+      promoteTypeandRemoveUsesSext(SI, I->getOperand(i), used);
+    }
+  } 
+}
+
+void PtrRangeAnalysis::promoteTypeandRemoveUsesZext (ZExtInst *ZI,
+                                                std::map<Value*,Type*> & used) {
+}
+
+void PtrRangeAnalysis::promoteTypeandReturnSext (SExtInst *SI,
+                                                std::map<Value*,Type*> & used) {
+}
+
+void PtrRangeAnalysis::promoteTypeandReturnZext (ZExtInst *ZI,
+                                                std::map<Value*,Type*> & used) {
+}
+
 void PtrRangeAnalysis::tryOptimizeLoop(Loop *L) {
   analyzeLoopPointers(L);
   std::vector<Instruction*> instVec;
