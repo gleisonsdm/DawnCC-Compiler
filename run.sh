@@ -7,6 +7,7 @@
 #Set default parameters of DawnCC
 CURRENT_DIR=`pwd`
 DEFAULT_ROOT_DIR=`pwd`
+KEEP_INTERMEDIARY_FILES_BOOL="false"
 GPUONLY_BOOL="false"
 PARALELLIZE_LOOPS_BOOL="true"
 PRAGMA_STANDARD_INT=1
@@ -59,6 +60,10 @@ do
             FILES_FOLDER="$2" # path to be scanned and have files processed
             shift
         ;;
+        -k|--KeepIntermediaryFiles)
+            KEEP_INTERMEDIARY_FILES_BOOL="$2"
+            shift
+        ;;
         *)
             # unknown option
         ;;
@@ -94,14 +99,10 @@ export FLAGSAI="-mem2reg -instnamer -loop-rotate"
 TEMP_FILE1="result.bc"
 TEMP_FILE2="result2.bc"
 TEMP_FILE3="result3.bc"
+LOG_FILE="out_pl.log"
+SCOPE_FILE_SUFFIX="_scope.dot"
 
-if [ -f "${TEMP_FILE1}" ]; then
-    rm ${TEMP_FILE1}
-fi
 
-if [ -f "${TEMP_FILE2}" ]; then
-    rm {TEMP_FILE2}
-fi
 
 cd ${FILES_FOLDER}
 
@@ -114,7 +115,7 @@ for f in $(find . -name '*.c' -or -name '*.cpp'); do
     $CLANG -g -S -emit-llvm ${f} -o ${TEMP_FILE1} 
 
     $OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
-      -scoped-noalias -alias-instrumentation -region-alias-checks -can-parallelize -S ${TEMP_FILE1}
+     -scoped-noalias -alias-instrumentation -region-alias-checks -can-parallelize -S ${TEMP_FILE1}
 
     $OPT -load $ST -load $WAI -annotateParallel -S ${TEMP_FILE1} -o ${TEMP_FILE2}
 
@@ -124,7 +125,41 @@ for f in $(find . -name '*.c' -or -name '*.cpp'); do
       -Run-Mode=false ${TEMP_FILE2} -o ${TEMP_FILE3}
 
     $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i "${f}"
+
+    #If configured to remove intermediate files
+    if [ "${KEEP_INTERMEDIARY_FILES_BOOL}" == "false" ]; then
+
+        #Delete file.ext_scope.dot if exists
+        if [ -f "${f}${SCOPE_FILE_SUFFIX}" ]; then
+            rm "${f}${SCOPE_FILE_SUFFIX}"
+        fi
+    fi
+
 done
+
+#If configured to remove intermediate files
+if [ "${KEEP_INTERMEDIARY_FILES_BOOL}" == "false" ]; then
+
+    #Delete result.bc if exists
+    if [ -f "${TEMP_FILE1}" ]; then
+        rm ${TEMP_FILE1}
+    fi
+
+    #Delete result2.bc if exists
+    if [ -f "${TEMP_FILE2}" ]; then
+        rm ${TEMP_FILE2}
+    fi
+
+    #Delete result3.bc if exists
+    if [ -f "${TEMP_FILE3}" ]; then
+        rm ${TEMP_FILE3}
+    fi
+
+    #Delete out_pl.log
+    if [ -f "${LOG_FILE}" ]; then
+        rm ${LOG_FILE}
+    fi
+fi
 
 cd ${CURRENT_DIR}
 
