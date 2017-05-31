@@ -75,28 +75,44 @@ fi
 
 
 
-#Create output folder for LLVM
-mkdir ${LLVM_OUTPUT_DIR}
+#Create output folder for LLVM if not already created
+if [ ! -d "${LLVM_OUTPUT_DIR}" ]; then
+    mkdir ${LLVM_OUTPUT_DIR}
+fi
 
-#Setup LLVM+Clang and scope-finder plugin
-mkdir -p ${LLVM_SRC}/tools/clang/tools/extra
-echo "add_subdirectory(scope-finder)" > ${LLVM_SRC}/tools/clang/tools/extra/CMakeLists.txt
-cp -rf ${DAWN_PATH}/ScopeFinder/scope-finder ${LLVM_SRC}/tools/clang/tools/extra/.
+#Setup LLVM+Clang and scope-finder plugin if not already setup
+EXTRA_FOLDER="${LLVM_SRC}/tools/clang/tools/extra"
 
-#Create setup with cmake
+if [ ! -f "${EXTRA_FOLDER}" ]; then
+    mkdir -p "${EXTRA_FOLDER}"
+    echo "add_subdirectory(scope-finder)" > ${EXTRA_FOLDER}/CMakeLists.txt
+    cp -rf ${DAWN_PATH}/ScopeFinder/scope-finder ${EXTRA_FOLDER}/.
+fi
+
+#Create setup with cmake if not already created
 cd ${LLVM_OUTPUT_DIR}
-cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
 
-#Build LLVM and Clang
+if [ ! -f "Makefile" ]; then
+    cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
+fi
+
+#Prebuild clang to workaround DawnCC build problems
+make clang -j${MAKE_THREADS} 
+
+#Build LLVM then go back to root folder
 make -j${MAKE_THREADS}
 cd ${ROOT_FOLDER}
 
-#Create lib folder of DawnCC
-mkdir ${DAWN_PATH}/lib 
+#Create lib folder of DawnCC if not already created
+if [ ! -f "${DAWN_PATH}/lib" ]; then
+    mkdir ${DAWN_PATH}/lib 
+fi
 
-#Navigate and create setup
+#Navigate to DawnCC output directory, run if theres no makefile, and then build DawnCC
 cd ${DAWN_PATH}/lib
-cmake -DLLVM_DIR=${LLVM_OUTPUT_DIR}/share/llvm/cmake ../
+if [ ! -f "Makefile" ]; then
+    cmake -DLLVM_DIR=${LLVM_OUTPUT_DIR}/share/llvm/cmake ../
+fi
 make -j${MAKE_THREADS}
 
 #Go back to root folder
