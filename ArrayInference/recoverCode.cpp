@@ -1413,16 +1413,56 @@ bool RecoverCode::needPointerAddrToRestrict(Value *V) {
 }
 
 bool RecoverCode::isPointerMD(Value *V) {
-  if (!isa<AllocaInst>(V))
-    return false;
-  return true;
+
+  if (isa<AllocaInst>(V))
+    return true;
+  if (GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
+    Module *M = GV->getParent();
+    Type *ty = GV->getType();
+    const DataLayout DT = DataLayout(M); 
+    ty = getInternalType(ty, 0, &DT);
+    return ty->isArrayTy();
+  }
+  return false;
 }
 
 std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
                             const DataLayout* DT) {
+  if (GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
+    Module *M = GV->getParent();
+    Type *ty = GV->getType();
+    // here we catch the ArrayTy.
+    //ty = getInternalType(ty, 0, DT);
+    ConstantsSimplify CS;
+    long long int size = CS.getFullSizeType(ty, DT);
+    size = size / getSizeToValue(GV, DT);
+    std::string result = getAccessString(GV,name, var, DT);
+    if (*var != -1) {
+      if (size != 1) {
+        result = "(" + NAME + "[" + std::to_string(*var) + "]";
+        result += " / " + std::to_string(size) + ")";
+      }
+      else {
+        result = NAME + "[" + std::to_string(*var) + "]";
+      }
+    }
+    else {
+      long long int num = 0;
+      if (!TryConvertToInteger(result, &num)) {
+         errs() << "RESULT = " << result << "\n";
+        setValidFalse();
+        return std::string();
+      }
+      if (num == 1)
+        result = std::to_string((size));
+      else
+        result = std::to_string((num + size));
+    }
+    return result;
+
+  }
+
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    AI->dump();
-    AI->getArraySize()->dump();
     std::string result =  getAccessString(AI->getArraySize(),name, var, DT);
     ConstantsSimplify CS;
     long long int size = CS.getFullSizeType(AI->getType(), DT);
