@@ -77,6 +77,24 @@ void Restrictifier::setName (std::string name) {
   NAME = name;
 }
 
+void Restrictifier::setAliasAnalysis(AliasAnalysis *aas) {
+  this->aa = aas;
+}
+
+void Restrictifier::setNameToValue(std::string name, Value *V) {
+  names[name] = V;
+}
+
+bool Restrictifier::hasNoAliasIn(std::string n1, std::string n2) {
+  if (!aa)
+    return false;
+  if (isa<AllocaInst>(names[n1]) || isa<AllocaInst>(names[n2]))
+    return true;
+  errs() << "Trying " << n1 << " - " << n2 << " ( " << 
+  this->aa->isNoAlias(names[n1], names[n2]) << " )\n"; 
+  return this->aa->isNoAlias(names[n1], names[n2]);
+}
+
 void Restrictifier::identifyOffsets (std::string str) {
   unsigned int index = 0, ie = 0;
 
@@ -139,6 +157,8 @@ void Restrictifier::getBounds (std::map<std::string, std::string> & lowerB,
 }
 
 std::string Restrictifier::generateRestrict (std::string varA, std::string varB) {
+  if(hasNoAliasIn(varA, varB))
+    return std::string();
   std::string varAA = ((needRef[varA]) ? ("&" + varA) : (varA));
   std::string varBB = ((needRef[varB]) ? ("&" + varB) : (varB));
   std::string str = std::string();

@@ -1448,18 +1448,14 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
     }
     else {
       long long int num = 0;
-      if (!TryConvertToInteger(result, &num)) {
-         errs() << "RESULT = " << result << "\n";
-        setValidFalse();
-        return std::string();
+      if (TryConvertToInteger(result, &num)) {
+        if (num == 1)
+          result = std::to_string((size));
+        else
+          result = std::to_string((num + size));
       }
-      if (num == 1)
-        result = std::to_string((size));
-      else
-        result = std::to_string((num + size));
     }
     return result;
-
   }
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
@@ -1478,15 +1474,12 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
     }
     else {
       long long int num = 0;
-      if (!TryConvertToInteger(result, &num)) {
-         errs() << "RESULT = " << result << "\n";
-        setValidFalse();
-        return std::string();
+      if (TryConvertToInteger(result, &num)) {
+        if (num == 1)
+          result = std::to_string((size));
+        else
+          result = std::to_string((num + size));
       }
-      if (num == 1)
-        result = std::to_string((size));
-      else
-        result = std::to_string((num + size));
     }
     return result;
   }
@@ -1509,6 +1502,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
   std::string expressionEnd = std::string();
 
   Restrictifier Rst = Restrictifier();
+  Rst.setAliasAnalysis(aa);
   Region *r = regionofBasicBlock((L->getLoopPreheader()), rp);
 
   if (!ptrRA->RegionsRangeData[r].HasFullSideEffectInfo)
@@ -1542,6 +1536,7 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
        ++It) {
     
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
+    Rst.setNameToValue(nameF.nameInFile, It->first);
     std::string lLimit = getAccessExpression(It->first, It->second.first,
         &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
@@ -1606,6 +1601,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
   std::string expressionEnd = std::string();
 
   Restrictifier Rst = Restrictifier();
+  Rst.setAliasAnalysis(aa);
 
   if (ptrRA->RegionsRangeData[r].HasFullSideEffectInfo == false)
     return false;
@@ -1651,6 +1647,7 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
        ++It) {
      
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
+    Rst.setNameToValue(nameF.nameInFile, It->first);
     std::string lLimit = getAccessExpression(It->first, It->second.first,
         &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,

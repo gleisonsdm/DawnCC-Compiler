@@ -42,6 +42,9 @@ class Restrictifier {
     bool valid;
   
     bool omp;
+
+    AliasAnalysis *aa;
+    std::map<std::string, Value*> names;
   //===---------------------------------------------------------------------===
 
   // To Know if the result of this Analysis is valid.
@@ -70,6 +73,11 @@ class Restrictifier {
   void setTrueOMP();
   void setFalseOMP();
 
+  // Trying to reduce the amount of checks, using LLVM's Alias Analysis.
+  void setAliasAnalysis(AliasAnalysis *aas);
+  void setNameToValue(std::string name, Value *V);
+  bool hasNoAliasIn(std::string n1, std::string n2);
+
   // Generates all tests to analyze and meansure pointer overlaps.
   std::string generateTests(std::string pragmas);
 
@@ -88,6 +96,7 @@ class Restrictifier {
     valid = true;
     setFalseOMP();
     limits.erase(limits.begin(), limits.end());
+    this->aa = nullptr;
   }
 };
 
