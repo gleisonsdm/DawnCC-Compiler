@@ -19,7 +19,7 @@ FILES_FOLDER="src"
 
 
 #Process arguments of script
-while [[ $# -gt 1 ]]
+while [ $# -gt 1 ]
 do
     key="$1"
 
