@@ -1,7 +1,7 @@
 //===--------------------------scope-finder.cpp-----------------------------===
 //
 //
-//Author: Breno Campos [brenosfg@dcc.ufmg.br | brenocfg@gmail.com]
+//Author: Breno Campos [brenosfg at dcc.ufmg.br | brenocfg at gmail.com]
 //
 //===-----------------------------------------------------------------------===
 //
