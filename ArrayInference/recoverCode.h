@@ -107,6 +107,10 @@ class RecoverCode {
   std::string getGenericExp (Instruction *I, std::string name, int *var,
                       const DataLayout *DT);
 
+  // Provides a implementation to TruncInst, support for short type
+  std::string getTruncExp (TruncInst *TI, std::string name, int *var,
+                      const DataLayout *DT);
+
   // Return the name of Instruction I.
   std::string getNameExp (Value *V, std::string name, int *var, const DataLayout *DT);
 

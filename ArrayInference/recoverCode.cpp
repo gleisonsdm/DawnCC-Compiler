@@ -365,6 +365,11 @@ bool RecoverCode::isMallocCall (const CallInst *CI) {
   return true;
 }
 
+ std::string RecoverCode::getTruncExp (TruncInst *TI, std::string name,
+                       int *var, const DataLayout *DT) {
+    return getAccessString(TI->getOperand(0),name,var, DT); 
+}
+
 // This void return the Name of some Variable for some memory access
 // instruction:
 std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
@@ -376,8 +381,15 @@ std::string RecoverCode::getNameExp (Value *V, std::string name, int *var,
     return std::string();
 
   *var = -1;
-  RecoverNames::VarNames nameF = rn->getNameofValue(V);
+  if (LoadInst *LD = dyn_cast<LoadInst>(V)) {
+    if (isa<CompositeType>(LD->getPointerOperand()->getType()) ||
+        isa<PointerType>(LD->getPointerOperand()->getType())) {
+       setValidFalse();
+       return std::string();
+    }
+  } 
 
+  RecoverNames::VarNames nameF = rn->getNameofValue(V);
   if (!isa<GetElementPtrInst>(V)) {
     if (name == nameF.nameInFile)
       return "0";
@@ -702,6 +714,7 @@ std::string RecoverCode::getAccessString (Value *V, std::string ptrName,
   if (!isValid()) {
     return std::string();
   }
+  V->dump();
   // Default Value is "-1", to identify empty values in pass.
   *var = -1;
   std::string name = std::string();
@@ -761,6 +774,12 @@ std::string RecoverCode::getAccessString (Value *V, std::string ptrName,
   if (!I || isa<ICmpInst>(I))
     return std::string(); 
 
+  if (TruncInst *TInst = dyn_cast<TruncInst>(I)) {
+    std::string result = getTruncExp(TInst, ptrName, var, DT);
+    insertComputedValue(V, var, result);
+    return result;
+ 
+  }
   if (ZExtInst *ZInst = dyn_cast<ZExtInst>(I)) {
     std::string result = getZextExp(ZInst, ptrName, var, DT);
     insertComputedValue(V, var, result);
@@ -1421,7 +1440,7 @@ bool RecoverCode::isPointerMD(Value *V) {
     Type *ty = GV->getType();
     const DataLayout DT = DataLayout(M); 
     ty = getInternalType(ty, 0, &DT);
-    return ty->isArrayTy();
+    return isValidPointer(V, &DT);
   }
   return false;
 }
@@ -1431,11 +1450,19 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
   if (GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
     Module *M = GV->getParent();
     Type *ty = GV->getType();
+    if (ty->getTypeID() == Type::PointerTyID)
+      ty = getInternalType(ty, 0, DT); 
     // here we catch the ArrayTy.
     //ty = getInternalType(ty, 0, DT);
     ConstantsSimplify CS;
+    errs() << "GV Type:\n";
+    ty->dump();
     long long int size = CS.getFullSizeType(ty, DT);
-    size = size / getSizeToValue(GV, DT);
+    if (size == -1) {
+      setValidFalse();
+      return std::string();
+    }
+    size = (size / getSizeToValue(GV, DT) + 1);
     std::string result = getAccessString(GV,name, var, DT);
     if (*var != -1) {
       if (size != 1) {
@@ -1462,7 +1489,11 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
     std::string result =  getAccessString(AI->getArraySize(),name, var, DT);
     ConstantsSimplify CS;
     long long int size = CS.getFullSizeType(AI->getType(), DT);
-    size = size / getSizeToValue(AI, DT);
+    if (size == -1) {
+      setValidFalse();
+      return std::string();
+    } 
+    size = (size / getSizeToValue(AI, DT)) + 1;
     if (*var != -1) {
       if (size != 1) {
         result = "(" + NAME + "[" + std::to_string(*var) + "]";
@@ -1537,24 +1568,29 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
     
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
     Rst.setNameToValue(nameF.nameInFile, It->first);
+    errs() << "Var = " << nameF.nameInFile << "\n";
     std::string lLimit = getAccessExpression(It->first, It->second.first,
         &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
         &DT, true);
+    errs() << "EndVar\n\n";
    
     std::string olLimit = std::string();
     std::string oSize = std::string();
     generateCorrectUB(lLimit, uLimit, olLimit, oSize);
+    if (oSize == "1")
+      continue;
     vctLower[nameF.nameInFile] = olLimit;
     vctUpper[nameF.nameInFile] = oSize;
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(L, It->first);
     vctPtr[nameF.nameInFile] = It->first;
     needR[nameF.nameInFile] = needPointerAddrToRestrict(It->first);
-    if (!isValid()) {
+    if (!isValid() || nameF.nameInFile.empty()) {
+      It->first->dump();
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
         " code for bounds of pointer: " << (nameF.nameInFile.empty() ?
         "<unable to recover pointer name>" : nameF.nameInFile) << "\n";
-      return isValid();
+      return false;
     }
 
   }
@@ -1652,21 +1688,24 @@ bool RecoverCode::analyzeRegion (Region *r, int Line, int LastLine,
         &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
         &DT, true);
-   std::string olLimit = std::string();
-   std::string oSize = std::string();
-   generateCorrectUB(lLimit, uLimit, olLimit, oSize);
+    std::string olLimit = std::string();
+    std::string oSize = std::string();
+    generateCorrectUB(lLimit, uLimit, olLimit, oSize);
+    if (oSize == "1")
+      continue; 
     vctLower[nameF.nameInFile] = olLimit;
     vctUpper[nameF.nameInFile] = oSize;
     vctPtMA[nameF.nameInFile] = ptrRA->getPointerAcessType(r, It->first);
     vctPtr[nameF.nameInFile] = It->first;
     needR[nameF.nameInFile] = needPointerAddrToRestrict(It->first);
     //errs() << nameF.nameInFile << "\n" << lLimit << "\n" << uLimit << "\n\n" ;
-    if (!isValid()) {
+    if (!isValid() || nameF.nameInFile.empty()) {
+      It->first->dump();
       errs() << "[TRANSFER-PRAGMA-INSERTION] WARNING: unable to generate C " <<
         " code for bounds of pointer: " << (nameF.nameInFile.empty() ?
         "<unable to recover pointer name>" : nameF.nameInFile) << "\n";
       errs() << Line << "\n";
-      return isValid();
+      return false;
     }
 
   }

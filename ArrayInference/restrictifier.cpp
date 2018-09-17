@@ -90,8 +90,6 @@ bool Restrictifier::hasNoAliasIn(std::string n1, std::string n2) {
     return false;
   if (isa<AllocaInst>(names[n1]) || isa<AllocaInst>(names[n2]))
     return true;
-  errs() << "Trying " << n1 << " - " << n2 << " ( " << 
-  this->aa->isNoAlias(names[n1], names[n2]) << " )\n"; 
   return this->aa->isNoAlias(names[n1], names[n2]);
 }
 

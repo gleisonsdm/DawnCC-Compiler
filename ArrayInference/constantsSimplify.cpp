@@ -359,19 +359,21 @@ long long int ConstantsSimplify::getFullSizeType(Type *tpy, const DataLayout *DT
   long long int result = 0;
   // Return basic types:
   if ((Type::ArrayTyID != tpy->getTypeID()) && 
-      (Type::PointerTyID != tpy->getTypeID())) {
+      (Type::PointerTyID != tpy->getTypeID()) &&
+      (Type::VectorTyID != tpy->getTypeID())) {
     return getSizeToTypeInBits(tpy, DT);
   }
-  // Return all possible dependences:
+  if (ArrayType *atpy = dyn_cast<ArrayType>(tpy)) {
+     return getFullSizeType(atpy->getElementType(), DT) * atpy->getArrayNumElements();
+  }
+  else if (VectorType *vtpy = dyn_cast<VectorType>(tpy)) {
+    return getFullSizeType(vtpy->getElementType(), DT) * vtpy->getArrayNumElements(); 
+  }
+  else if (PointerType *ptpy = dyn_cast<PointerType>(tpy)) {
+    return getFullSizeType(ptpy->getElementType(), DT);
+  }
   for (unsigned int i = 0; i < tpy->getNumContainedTypes(); i++) {
-    if (ArrayType *atpy = dyn_cast<ArrayType>(tpy->getContainedType(i))) {
-      //errs() << "E = " << std::to_string(atpy->getArrayNumElements()) << "\n";
-      //errs() << "X = " << std::to_string(getFullSizeType(atpy, DT)) << "\n";
-      result += getFullSizeType(atpy, DT) * atpy->getArrayNumElements();
-    }
-    else {
       result += getFullSizeType(tpy->getContainedType(i), DT);
-    }
   }
   return result;
 }
