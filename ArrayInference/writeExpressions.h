@@ -72,7 +72,7 @@ class WriteExpressions : public FunctionPass {
   std::string VETNAME = "LLVM";
 
   std::vector<std::string> Expression;
-  
+
   std::map<Loop*, bool> isknowedLoop;
   //===---------------------------------------------------------------------===
 
@@ -155,6 +155,8 @@ class WriteExpressions : public FunctionPass {
   // For Region "R", write the correct computation, bounds and parallel
   // annotations.
   void writeComputation (int line, int lineEnd, Region *R);
+
+  void findACCroutines (Function *F);
   
   public:
 
@@ -162,6 +164,8 @@ class WriteExpressions : public FunctionPass {
   //                              Data Structs
   //===---------------------------------------------------------------------===
   std::map<unsigned int, std::string> Comments;
+
+  std::map<std::string, bool> routines;
   //===---------------------------------------------------------------------===
 
   static char ID;

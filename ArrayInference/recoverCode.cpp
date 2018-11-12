@@ -700,10 +700,6 @@ std::string RecoverCode::getPHINode (Value *V, std::string ptrName, int *var,
   if (names.size() == 1)
     return names.begin()->first;
 
-  errs() << "\n" << names.size() << " names for:\n";
-  for (auto I = names.begin(), IE = names.end(); I != IE; I++) {
-    errs() << I->first << "\n";
-  } 
   return std::string();
 }
 
@@ -714,7 +710,6 @@ std::string RecoverCode::getAccessString (Value *V, std::string ptrName,
   if (!isValid()) {
     return std::string();
   }
-  V->dump();
   // Default Value is "-1", to identify empty values in pass.
   *var = -1;
   std::string name = std::string();
@@ -1455,14 +1450,12 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
     // here we catch the ArrayTy.
     //ty = getInternalType(ty, 0, DT);
     ConstantsSimplify CS;
-    errs() << "GV Type:\n";
-    ty->dump();
     long long int size = CS.getFullSizeType(ty, DT);
     if (size == -1) {
       setValidFalse();
       return std::string();
     }
-    size = (size / getSizeToValue(GV, DT) + 1);
+    size = (size / getSizeToValue(GV, DT));
     std::string result = getAccessString(GV,name, var, DT);
     if (*var != -1) {
       if (size != 1) {
@@ -1493,7 +1486,7 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
       setValidFalse();
       return std::string();
     } 
-    size = (size / getSizeToValue(AI, DT)) + 1;
+    size = (size / getSizeToValue(AI, DT));
     if (*var != -1) {
       if (size != 1) {
         result = "(" + NAME + "[" + std::to_string(*var) + "]";
@@ -1568,12 +1561,10 @@ bool RecoverCode::analyzeLoop (Loop* L, int Line, int LastLine,
     
     RecoverNames::VarNames nameF = rn->getNameofValue(It->first);
     Rst.setNameToValue(nameF.nameInFile, It->first);
-    errs() << "Var = " << nameF.nameInFile << "\n";
     std::string lLimit = getAccessExpression(It->first, It->second.first,
         &DT, false);
     std::string uLimit = getAccessExpression(It->first, It->second.second,
         &DT, true);
-    errs() << "EndVar\n\n";
    
     std::string olLimit = std::string();
     std::string oSize = std::string();

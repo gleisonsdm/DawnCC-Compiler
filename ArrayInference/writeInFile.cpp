@@ -38,6 +38,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FileSystem.h"
+#include <climits>
 
 #include "writeInFile.h" 
 
@@ -98,6 +99,16 @@ std::string WriteInFile::getLineForIns(Value *V) {
         return line;
       }
   return std::string();
+}
+
+int WriteInFile::getSmallerLineNo(Module *M) {
+  int small = INT_MAX;
+  for (auto F = M->begin(), FE = M->end(); F != FE; F++)
+    for (auto B = F->begin(), BE = F->end(); B != BE; B++) 
+      for (auto I = B->begin(), IE = B->end(); I != IE; I++)
+        if (getLineNo(I) != -1) 
+          small = std::min(small, getLineNo(I));
+  return small;
 }
 
 void WriteInFile::addCommentToLine(std::string Comment, unsigned int Line) {
@@ -232,6 +243,19 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
   else {
     this->we = &getAnalysis<WriteExpressions>(*F);
     copyComments(this->we->Comments);
+    int line = getSmallerLineNo(&M);
+    for (auto I = this->we->routines.begin(), IE = this->we->routines.end();
+           I != IE; I++) {
+      if (line != INT_MAX) {
+      
+        std::string tmp = I->first;
+        if ((tmp != "llvm.dbg.value") && (tmp != "llvm.memcpy.p0i8.p0i8.i32") &&
+            (tmp != "llvm.memcpy.p0i8.p0i8.i64")) {  
+          tmp = "#pragma acc_routine(" + tmp + ")\n";
+          addCommentToLine(tmp, line);
+        }
+      }
+    }
   }
 }   
 

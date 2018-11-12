@@ -109,6 +109,8 @@ class WriteInFile : public ModulePass {
   // Find the name of source file for Function F.
   bool findFunctionFileName (Function &F);
 
+  int getSmallerLineNo(Module *M);
+
   public:
 
   static char ID;

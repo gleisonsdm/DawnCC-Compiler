@@ -290,7 +290,19 @@ void WriteExpressions::regionIdentify (Region *R) {
   // Case exists, use to add the test on pragmas.
   std::string test;
   if (RC.analyzeLoop(l, line, ERROR_VALUE, ptrRA, rp, aa, se, li, dt, test)) {
-   
+  
+    std::map<std::string, bool> m;
+    for (auto BB = l->block_begin(), BE = l->block_end(); BB != BE; BB++) {
+      for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
+        if (CallInst *CI = dyn_cast<CallInst>(I)) {
+          if (routines.count(CI->getCalledFunction()->getName()) == 0) {
+             findACCroutines(CI->getCalledFunction());
+          }
+        }
+      }
+    }
+
+
     copyComments(RC.Comments);
     clearExpression();
 
@@ -408,6 +420,18 @@ void WriteExpressions::writeComputation (int line, int lineEnd,
   // Case exists, use to add the test on pragmas.
   std::string test;
   if (RC.analyzeRegion(R, line, ERROR_VALUE, ptrRA, rp, aa, se, li, dt, test)) {
+
+    std::map<std::string, bool> m;
+    for (auto BB = R->block_begin(), BE = R->block_end(); BB != BE; BB++) {
+      for (auto I = (*BB)->begin(), IE = (*BB)->end(); I != IE; I++) {
+        if (CallInst *CI = dyn_cast<CallInst>(I)) {
+          if (routines.count(CI->getCalledFunction()->getName()) == 0) {
+             findACCroutines(CI->getCalledFunction());
+          }
+        }
+      }
+    }
+
     copyComments(RC.Comments);
     clearExpression();
     annotateAccKernels(R, computationName, RC.restric);
@@ -485,6 +509,25 @@ void WriteExpressions::functionIdentify (Function *F) {
 Region* WriteExpressions::regionofBasicBlock(BasicBlock *bb) {
   Region *r = rp->getRegionInfo().getRegionFor(bb);
   return r;
+}
+
+void WriteExpressions::findACCroutines (Function *F) {
+  if (F->isDeclaration() || F->isIntrinsic() ||
+      F->hasAvailableExternallyLinkage()) {
+    return;
+  }
+  if (routines.count(F->getName()) == 0) {
+    routines[F->getName()] = true;
+  }
+  for (auto BB = F->begin(), BE = F->end(); BB != BE; BB++) {
+    for (auto I = BB->begin(), IE = BB->end(); I != IE; I++) {
+      if (CallInst *CI = dyn_cast<CallInst>(I)) {
+        if (routines.count(CI->getCalledFunction()->getName()) == 0) {
+           findACCroutines(CI->getCalledFunction());
+        }
+      }
+    }
+  }
 }
 
 bool WriteExpressions::isLoopAnalyzable (Loop *L){
