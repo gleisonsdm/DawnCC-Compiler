@@ -513,7 +513,7 @@ Region* WriteExpressions::regionofBasicBlock(BasicBlock *bb) {
 
 void WriteExpressions::findACCroutines (Function *F) {
   if (F->isDeclaration() || F->isIntrinsic() ||
-      F->hasAvailableExternallyLinkage()) {
+      F->hasAvailableExternallyLinkage() || (ClEmitOMP != ACC)) {
     return;
   }
   if (routines.count(F->getName()) == 0) {
