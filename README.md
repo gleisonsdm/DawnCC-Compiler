@@ -71,7 +71,7 @@ Or you can build it manually by downloading [LLVM](http://llvm.org/releases/3.7.
     	${REPO}/src/ScopeFinder/setup.sh
 
     	#Create build setup for LLVM+Clang using CMake
-    	cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
+    	CXX=g++-5 cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
     	
     	#Compile LLVM+Clang (this will likely take a while)
     	make ${MAKEFLAG}
@@ -86,7 +86,7 @@ Or you can build it manually by downloading [LLVM](http://llvm.org/releases/3.7.
      	# build under ${LLVM_BUILD_DIR}
      	mkdir ${REPO}/lib
      	cd ${REPO}/lib
-     	cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
+     	CXX=g++-5 cmake -DLLVM_DIR=${LLVM_BUILD_DIR}/share/llvm/cmake ../src/
      	make
     	cd -
 
