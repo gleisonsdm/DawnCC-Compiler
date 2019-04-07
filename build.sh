@@ -93,7 +93,7 @@ fi
 cd ${LLVM_OUTPUT_DIR}
 
 if [ ! -f "Makefile" ]; then
-    cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
+    CXX=g++-5 cmake -DCMAKE_BUILD_TYPE=debug -DBUILD_SHARED_LIBS=ON ${LLVM_SRC}
 fi
 
 #Prebuild clang to workaround DawnCC build problems
@@ -111,7 +111,7 @@ fi
 #Navigate to DawnCC output directory, run if theres no makefile, and then build DawnCC
 cd ${DAWN_PATH}/lib
 if [ ! -f "Makefile" ]; then
-    cmake -DLLVM_DIR=${LLVM_OUTPUT_DIR}/share/llvm/cmake ../
+    CXX=g++-5 cmake -DLLVM_DIR=${LLVM_OUTPUT_DIR}/share/llvm/cmake ../
 fi
 make -j${MAKE_THREADS}
 
