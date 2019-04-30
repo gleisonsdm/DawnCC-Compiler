@@ -15,8 +15,8 @@ POINTER_DESAMBIGUATION_BOOL="true"
 MEMORY_COALESCING_BOOL="true"
 MINIMIZE_ALIASING_BOOL="true"
 CODE_CHANGE_BOOL="true"
-FILES_FOLDER="src"
-
+FILES_FOLDER=""
+FILE=""
 
 #Process arguments of script
 while [ $# -gt 1 ]
@@ -58,6 +58,10 @@ do
         ;;
         -src|--SourceFolder)
             FILES_FOLDER="$2" # path to be scanned and have files processed
+            shift
+        ;;
+        -f|--File)
+            FILE="$2" # file to be processed
             shift
         ;;
         -k|--KeepIntermediaryFiles)
@@ -102,7 +106,7 @@ TEMP_FILE3="result3.bc"
 LOG_FILE="out_pl.log"
 SCOPE_FILE_SUFFIX="_scope.dot"
 
-
+if [ ! -z $FILES_FOLDER]; then
 
 cd ${FILES_FOLDER}
 
@@ -136,6 +140,43 @@ for f in $(find . -name '*.c' -or -name '*.cpp'); do
     fi
 
 done
+fi
+if [ ! -z $FILE]
+
+    f=${FILE}
+
+    $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i ${f}
+
+    $CLANG -Xclang -load -Xclang $SCOPEFIND -Xclang -add-plugin -Xclang -find-scope -g -O0 -c -fsyntax-only ${f}
+
+    $CLANG -g -S -emit-llvm ${f} -o ${TEMP_FILE1} 
+
+    $OPT -load $PRA -load $AI -load $DPLA -load $CP $FLAGS -ptr-ra -basicaa \
+     -scoped-noalias -alias-instrumentation -region-alias-checks -can-parallelize -S ${TEMP_FILE1}
+
+    $OPT -load $ST -load $WAI -annotateParallel -S ${TEMP_FILE1} -o ${TEMP_FILE2}
+
+    $OPT -S $FLAGSAI -load $ST -load $WAI -writeInFile -stats -Emit-GPU=${GPUONLY_BOOL} \
+      -Emit-Parallel=${PARALELLIZE_LOOPS_BOOL} -Emit-OMP=${PRAGMA_STANDARD_INT} -Restrictifier=${POINTER_DESAMBIGUATION_BOOL} \
+      -Memory-Coalescing=${MEMORY_COALESCING_BOOL} -Ptr-licm=${MINIMIZE_ALIASING_BOOL} -Ptr-region=${CODE_CHANGE_BOOL} \
+      -Run-Mode=false ${TEMP_FILE2} -o ${TEMP_FILE3}
+
+    $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i "${f}"
+
+    #If configured to remove intermediate files
+    if [ "${KEEP_INTERMEDIARY_FILES_BOOL}" == "false" ]; then
+
+        #Delete file.ext_scope.dot if exists
+        if [ -f "${f}${SCOPE_FILE_SUFFIX}" ]; then
+            rm "${f}${SCOPE_FILE_SUFFIX}"
+        fi
+    fi
+fi 
+if [-z $FILE]; then
+    if [-z $FILES_FOLDER]; then
+        echo "ERROR : -f or -src are empty. No files found to be processed."
+    fi
+fi
 
 #If configured to remove intermediate files
 if [ "${KEEP_INTERMEDIARY_FILES_BOOL}" == "false" ]; then
