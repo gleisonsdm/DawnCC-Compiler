@@ -96,11 +96,17 @@ class WriteInFile : public ModulePass {
   // To print Information in source file.
   void printToFile(std::string Input, std::string Output);
 
+  // To generate a patch file.
+  void printPragToFile(std::string Output);
+
   // To copy the comments to local "Comments".
   void copyComments(std::map<unsigned int,std::string > CommentsIn);
   
-  // Create a new name to write the output file
+  // Create a new name to write the output file.
   std::string generateOutputName (std::string fileName);
+
+  // Create a new name to write the pragmas inserted.
+  std::string generatePragOutputName (std::string fileName);
 
   // Find the name of source file for Module M.
   // Return the first name of file found.

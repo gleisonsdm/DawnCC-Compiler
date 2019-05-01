@@ -138,10 +138,10 @@ for f in $(find . -name '*.c' -or -name '*.cpp'); do
             rm "${f}${SCOPE_FILE_SUFFIX}"
         fi
     fi
-
 done
 fi
-if [ ! -z $FILE]
+
+if [ ! -z $FILE ]; then
 
     f=${FILE}
 
@@ -162,7 +162,7 @@ if [ ! -z $FILE]
       -Run-Mode=false ${TEMP_FILE2} -o ${TEMP_FILE3}
 
     $CLANGFORM -style="{BasedOnStyle: llvm, IndentWidth: 2}" -i "${f}"
-
+   
     #If configured to remove intermediate files
     if [ "${KEEP_INTERMEDIARY_FILES_BOOL}" == "false" ]; then
 
@@ -172,8 +172,9 @@ if [ ! -z $FILE]
         fi
     fi
 fi 
-if [-z $FILE]; then
-    if [-z $FILES_FOLDER]; then
+
+if [ -z $FILE ]; then
+    if [ -z $FILES_FOLDER ]; then
         echo "ERROR : -f or -src are empty. No files found to be processed."
     fi
 fi

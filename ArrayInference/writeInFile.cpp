@@ -163,6 +163,20 @@ while (!Infile.eof()) {
 File.close();
 }
 
+void WriteInFile::printPragToFile(std::string Output) {
+std::error_code EC; 
+sys::fs::OpenFlags Flags = sys::fs::F_RW;
+raw_fd_ostream File(Output.c_str(), EC, Flags);
+errs() << "\nWriting output to file " << Output << "\n";
+
+for (auto I = Comments.begin(), IE = Comments.end(); I != IE; I++) {
+  File << I->fisrt << "a" << I->first << "\n";
+  for (unsigned i = 1, ie = Comments[LineNo].size(); i != ie; ++i){
+     File << Comments[I->first][i];
+  }
+}
+File.close();
+}
 
 void WriteInFile::copyComments(std::map <unsigned int, std::string> CommentsIn){
 for(auto I = CommentsIn.begin(), E = CommentsIn.end(); I != E; ++I)
@@ -184,6 +198,10 @@ std::string WriteInFile::generateOutputName (std::string fileName) {
   if (found != std::string::npos)
     fileName.replace(found,key.length(),"_AI.");
   return fileName;
+}
+
+std::string WriteInFile::generatePragOutputName (std::string fileName) {
+  return fileName + ".patch";
 }
 
 bool WriteInFile::findModuleFileName (Module &M) {
@@ -232,6 +250,7 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
   // write the last module available with information..
   if (lInputFile != InputFile) {
     printToFile(lInputFile, generateOutputName(lInputFile));
+    printPragToFile(generatePragOutputName(lInputFile));
     lInputFile = InputFile;
     Comments.erase(Comments.begin(), Comments.end());
   }
@@ -260,6 +279,7 @@ for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F) {
 }   
 
 printToFile(InputFile, generateOutputName(InputFile));
+printPragToFile(generatePragOutputName(lInputFile));
 return false;
 }
 
