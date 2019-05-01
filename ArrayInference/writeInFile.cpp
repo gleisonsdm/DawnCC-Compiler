@@ -170,8 +170,8 @@ raw_fd_ostream File(Output.c_str(), EC, Flags);
 errs() << "\nWriting output to file " << Output << "\n";
 
 for (auto I = Comments.begin(), IE = Comments.end(); I != IE; I++) {
-  File << std::to_string(I->first) << "a" << std::to_string(I->first) << "\n";
-  for (unsigned i = 1, ie = Comments[LineNo].size(); i != ie; ++i){
+  File << std::to_string(I->first-1) << "a" << std::to_string(I->first) << "\n";
+  for (unsigned i = 0, ie = Comments[I->first].size(); i != ie; ++i) {
      File << Comments[I->first][i];
   }
 }
