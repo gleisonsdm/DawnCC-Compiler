@@ -1244,8 +1244,6 @@ std::string RecoverCode::getDataPragma (
   result += "\n";
   if (OMPF == ACC)
     result += "#pragma acc kernels\n";
-  else if (OMPF == OMP_CPU)
-    result += "#pragma omp target\n";
   return result;
 }
 
