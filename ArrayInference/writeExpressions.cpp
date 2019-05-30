@@ -348,11 +348,6 @@ void WriteExpressions::writeKernels (Loop *L, std::string NAME, bool restric) {
     addCommentToLine(pragma, line);
     return;
   }
-  if (!ClEmitParallel && (ClEmitOMP == OMP_CPU)) {
-    pragma = "#pragma omp target " + flag + "\n";
-    addCommentToLine(pragma, line);
-    return;
-  }
   BasicBlock *BB = L->getLoopLatch();
   MDNode *MD = nullptr;
   MDNode *MDDivergent = nullptr;
@@ -367,10 +362,6 @@ void WriteExpressions::writeKernels (Loop *L, std::string NAME, bool restric) {
   numWL++;
   if (ClEmitOMP == ACC)
     addCommentToLine(pragma, line);
-  else if (ClEmitOMP == OMP_CPU) {
-    pragma = "#pragma omp target" + flag + "\n";
-    addCommentToLine(pragma, line);
-  }
   if (ClEmitParallel) {
     denotateLoopParallel(L, std::string());
     marknumWL(L);
