@@ -132,7 +132,7 @@ class WriteExpressions : public FunctionPass {
   void functionIdentify(Function *F);
 
   // Use the metadata to validate insertion of "loop independent" pragmas
-  void denotateLoopParallel (Loop *L, std::string condition);
+  void denotateLoopParallel (Loop *L, std::string condition, bool topLevelLoop);
 
   // Return true if the loop "L" has isParallel metadata, and false case not.
   bool isLoopParallel (Loop *L);
