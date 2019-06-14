@@ -144,10 +144,12 @@ std::string WriteExpressions::getUniqueString () {
   return result;
 }
 
-void WriteExpressions::denotateLoopParallel (Loop *L, std::string condition) {
+void WriteExpressions::denotateLoopParallel (Loop *L, std::string condition, bool topLevelLoop) {
   std::string pragma = "#pragma acc loop independent " + condition + "\n";
-  if ((ClEmitOMP == OMP_GPU) || (ClEmitOMP == OMP_CPU) )
+  if ((ClEmitOMP == OMP_GPU) || (ClEmitOMP == OMP_CPU))
     pragma = "#pragma omp parallel for " + condition + "\n";
+  if ((ClEmitOMP == OMP_GPU) && (topLevelLoop == true))
+    pragma = "#pragma omp target parallel for " + condition + "\n";
   BasicBlock *BB = L->getLoopLatch();
   MDNode *MD = nullptr;
   MDNode *MDDivergent = nullptr;
@@ -163,7 +165,7 @@ void WriteExpressions::denotateLoopParallel (Loop *L, std::string condition) {
   numWL++;
   addCommentToLine(pragma, line);
   for (Loop *SubLoop : L->getSubLoops())
-    denotateLoopParallel(SubLoop, condition);
+    denotateLoopParallel(SubLoop, condition, false);
 }
 
 bool WriteExpressions::isLoopParallel (Loop *L) {
@@ -307,7 +309,10 @@ void WriteExpressions::regionIdentify (Region *R) {
     clearExpression();
 
     if (ClEmitParallel) {
-      denotateLoopParallel(l, test);
+      if (ClEmitOMP == OMP_GPU)
+        denotateLoopParallel(l, test, true);
+      else
+        denotateLoopParallel(l, test, false);
       return;
     }
     
@@ -363,7 +368,10 @@ void WriteExpressions::writeKernels (Loop *L, std::string NAME, bool restric) {
   if (ClEmitOMP == ACC)
     addCommentToLine(pragma, line);
   if (ClEmitParallel) {
-    denotateLoopParallel(L, std::string());
+    if (ClEmitOMP == OMP_GPU)
+      denotateLoopParallel(L, std::string(), true);
+    else
+      denotateLoopParallel(L, std::string(), false);
     marknumWL(L);
   }
 }
