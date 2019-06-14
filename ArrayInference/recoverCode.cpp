@@ -1189,8 +1189,6 @@ std::string RecoverCode::getDataPragma (
       ldnsts.push_back(I->first); 
   }
   // Create data copies - Host to Devide
-  if (OMPF == OMP_GPU)
-    result += "#pragma omp target device (GPU_DEVICE)\n";
   if ((OMPF == OMP_GPU) || (OMPF == OMP_CPU)) {
     result += "#pragma omp target data ";
     if (loads.size() != 0)
