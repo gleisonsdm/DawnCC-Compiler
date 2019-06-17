@@ -1452,9 +1452,9 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
       setValidFalse();
       return std::string();
     }
-    size = (size / getSizeToValue(GV, DT));
+    size = (size / getSizeToValue(GV, DT));*/
     std::string result = getAccessString(GV,name, var, DT);
-    if (*var != -1) {
+    /*if (*var != -1) {
       if (size != 1) {
         result = "(" + NAME + "[" + std::to_string(*var) + "]";
         result += " / " + std::to_string(size) + ")";
