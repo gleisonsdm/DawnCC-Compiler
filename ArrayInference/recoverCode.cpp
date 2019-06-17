@@ -1443,7 +1443,7 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
       ty = getInternalType(ty, 0, DT); 
     // here we catch the ArrayTy.
     if (ArrayType *atpy = dyn_cast<ArrayType>(ty)) {
-      result = std::to_string((atpy->getArrayNumElements()));
+      return std::to_string((atpy->getArrayNumElements()));
     }
     //ty = getInternalType(ty, 0, DT);
     /*ConstantsSimplify CS;
