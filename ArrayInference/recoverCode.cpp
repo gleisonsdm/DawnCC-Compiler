@@ -1442,8 +1442,11 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
     if (ty->getTypeID() == Type::PointerTyID)
       ty = getInternalType(ty, 0, DT); 
     // here we catch the ArrayTy.
+    if (ArrayType *atpy = dyn_cast<ArrayType>(tpy)) {
+      result = std::to_string((atpy->getArrayNumElements()));
+    }
     //ty = getInternalType(ty, 0, DT);
-    ConstantsSimplify CS;
+    /*ConstantsSimplify CS;
     long long int size = CS.getFullSizeType(ty, DT);
     if (size == -1) {
       setValidFalse();
@@ -1468,13 +1471,13 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
         else
           result = std::to_string((num + size));
       }
-    }
+    }*/
     return result;
   }
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    std::string result =  getAccessString(AI->getArraySize(),name, var, DT);
-    ConstantsSimplify CS;
+    std::string result =  getAccessString(AI->getArraySize(), name, var, DT);
+    /*ConstantsSimplify CS;
     long long int size = CS.getFullSizeType(AI->getType(), DT);
     if (size == -1) {
       setValidFalse();
@@ -1498,7 +1501,7 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
         else
           result = std::to_string((num + size));
       }
-    }
+    }*/
     return result;
   }
   return std::string();
