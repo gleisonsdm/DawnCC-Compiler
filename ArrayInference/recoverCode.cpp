@@ -1452,9 +1452,9 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
       setValidFalse();
       return std::string();
     }
-    size = (size / getSizeToValue(GV, DT));*/
+    size = (size / getSizeToValue(GV, DT));
     std::string result = getAccessString(GV,name, var, DT);
-    /*if (*var != -1) {
+    if (*var != -1) {
       if (size != 1) {
         result = "(" + NAME + "[" + std::to_string(*var) + "]";
         result += " / " + std::to_string(size) + ")";
@@ -1471,12 +1471,15 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
         else
           result = std::to_string((num + size));
       }
-    }*/
-    return result;
+    }
+    return result;*/
   }
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
     std::string result =  getAccessString(AI->getArraySize(), name, var, DT);
+    if (ArrayType *atpy = dyn_cast<ArrayType>(AI->getType())) {
+      return std::to_string((atpy->getArrayNumElements()));
+    }    
     /*ConstantsSimplify CS;
     long long int size = CS.getFullSizeType(AI->getType(), DT);
     if (size == -1) {
@@ -1501,9 +1504,10 @@ std::string RecoverCode::getPointerMD (Value *V, std::string name, int *var,
         else
           result = std::to_string((num + size));
       }
-    }*/
-    return result;
+    }
+    return result;*/
   }
+  setValidFalse();
   return std::string();
 }
 
