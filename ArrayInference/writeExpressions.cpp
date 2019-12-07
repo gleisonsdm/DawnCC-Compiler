@@ -164,8 +164,8 @@ void WriteExpressions::denotateLoopParallel (Loop *L, std::string condition, boo
   int line = L->getStartLoc()->getLine();
   numWL++;
   addCommentToLine(pragma, line);
-  for (Loop *SubLoop : L->getSubLoops())
-    denotateLoopParallel(SubLoop, condition, false);
+  //for (Loop *SubLoop : L->getSubLoops())
+  //  denotateLoopParallel(SubLoop, condition, false);
 }
 
 bool WriteExpressions::isLoopParallel (Loop *L) {
