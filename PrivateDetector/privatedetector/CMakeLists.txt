@@ -5,7 +5,7 @@ add_library(CLANGPrivateDetector MODULE
 )
 
 if(LLVM_ENABLE_PLUGINS AND (WIN32 OR CYGWIN))
-  target_link_libraries(ompextractor ${cmake_2_8_12_PRIVATE}
+  target_link_libraries(CLANGPrivateDetector ${cmake_2_8_12_PRIVATE}
     clangAST
     clangBasic
     clangFrontend
