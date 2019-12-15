@@ -77,7 +77,7 @@ done
 
 
 #Export path to llvm and its tools
-LLVM_PATH="${DEFAULT_ROOT_DIR}/llvm-build/"
+LLVM_PATH="${DEFAULT_ROOT_DIR}/llvm-build"
 export CLANG="${LLVM_PATH}/bin/clang"
 export CLANGFORM="${LLVM_PATH}/bin/clang-format"
 export OPT="${LLVM_PATH}/bin/opt"
@@ -106,7 +106,7 @@ TEMP_FILE3="result3.bc"
 LOG_FILE="out_pl.log"
 SCOPE_FILE_SUFFIX="_scope.dot"
 
-if [ ! -z $FILES_FOLDER]; then
+if [ ! -z $FILES_FOLDER ]; then
 
 cd ${FILES_FOLDER}
 
