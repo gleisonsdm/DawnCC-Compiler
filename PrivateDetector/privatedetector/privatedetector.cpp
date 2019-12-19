@@ -30,7 +30,7 @@
 //The plugin can be set to run during any Clang compilation command, using the
 //following syntax:
 //
-//  clang -Xclang -load -Xclang $SCOPE -Xclang -add-plugin -Xclang -extract-omp
+//  clang -Xclang -load -Xclang $SCOPE -Xclang -add-plugin -Xclang -private-detector
 //
 //  Where $SCOPE -> points to the ompextractor.so shared library file location 
 //===-----------------------------------------------------------------------===
@@ -46,6 +46,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Basic/SourceLocation.h"
 #include <stack>
 #include <map>
 #include <vector>
@@ -68,6 +69,7 @@ class PragmaVisitor : public RecursiveASTVisitor<PragmaVisitor> {
 private:
     ASTContext *astContext; //provides AST context info
     MangleContext *mangleContext;
+    map<ValueDecl, bool> inductionVars; //map of all variables to a boolean value indicating if this variable is used as induction at some point
 
 public:
     
@@ -150,6 +152,22 @@ public:
       }
     }
 
+    /*recursively visits the children of a node and returns a vector containing all found*/
+    virtual void RecVisitChildren(Stmt *S, vector<ValueDecl> &recVars){
+	for (Stmt::child_iterator i = S->child_begin(), e = S->child_end(); i!=e; ++i) {
+     		Stmt *child = *i;
+                if (child!=nullptr) {
+			if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(child)) {
+				string varName = DRE->getDecl()->getNameAsString();
+				recVars.push_back(*DRE->getDecl());
+				//errs() <<varName <<"\n";
+				return;
+			}
+		}
+		RecVisitChildren(child->IgnoreContainers(true), recVars);
+	}
+    }
+
     /*visits all nodes of type decl*/
     virtual bool VisitDecl(Decl *D) {
 	if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -161,8 +179,65 @@ public:
 
 	  }
 	}
+	else if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+		string varName = VD->getNameAsString();
+		SourceLocation SL = VD->getLocStart();
+                FullSourceLoc FSL = astContext->getFullLoc(SL);
+                if(FSL.isValid()){
+	                errs() <<"Variable declaration " << varName << " at line:" << FSL.getSpellingLineNumber() <<"\n";
+                }
+		ValueDecl *ValD = dyn_cast<ValueDecl>(VD);
+		ValueDecl value = *ValD;
+		inductionVars.insert(value,false); //the error happens at this line
+	}
 	// Add an else here, to find other declarations.
       return true;
+    }
+
+
+    /* receives a loop statement and find its induction variables */
+    void setInductionVars(Stmt *S){
+	  vector<ValueDecl> *indVars = new vector<ValueDecl>;
+	  if (ForStmt *FS = dyn_cast<ForStmt>(S)) {
+		  errs() <<" induction variable: ";
+		  RecVisitChildren(FS->getInc()->IgnoreContainers(true), *indVars);
+		  for (auto& it:*indVars){
+			  errs() <<it.getNameAsString() <<" ";
+		  }
+		  errs() <<"\n";
+
+	  }
+
+    }
+
+    /*visits all nodes of type stmt*/
+    virtual bool VisitStmt(Stmt *S){
+	    vector<ValueDecl> *loopVars = new vector<ValueDecl>;
+	    if (ForStmt *FS = dyn_cast<ForStmt>(S)) {
+		    SourceLocation SL = S->getLocStart();
+		    FullSourceLoc FSL = astContext->getFullLoc(SL);
+		    if (FSL.isValid()) {
+			    errs() <<"For statement found at line: " << FSL.getSpellingLineNumber() <<"\n";
+		    }
+		    setInductionVars(S);
+		    for (Stmt::child_iterator i = FS->child_begin(), e = FS->child_end(); i!=e; ++i) {
+			    Stmt *child = *i;
+			    if (child!=nullptr) {
+				if (BinaryOperator *BO = dyn_cast<BinaryOperator>(child)) {
+                                    if (BO->isAssignmentOp()) {
+					    RecVisitChildren(BO->IgnoreContainers(true), *loopVars);
+				    }
+                            	}
+			    }
+		    }
+		    errs() <<"----------------------\n";
+		    for (auto& it:*v){
+                          errs() <<it.getNameAsString() <<" ";
+                  }
+                  errs() <<"\n";
+
+	    }
+	    return true;
     }
 
 };
@@ -207,4 +282,4 @@ protected:
 
 /*register the plugin and its invocation command in the compilation pipeline*/
 static FrontendPluginRegistry::Add<PragmaPluginAction> X
-                                               ("-private-detector", "Private Detector");
+                                               ("-private-detector", "Private Variables Detector");
