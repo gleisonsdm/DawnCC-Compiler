@@ -117,3 +117,24 @@ make -j${MAKE_THREADS}
 
 #Go back to root folder
 cd ${ROOT_FOLDER}
+
+cd "${ROOT_FOLDER}/llvm-build/"
+LLVM_OUTPUT_DIR=$(pwd)
+cd "${ROOT_FOLDER}"
+
+cd "${ROOT_FOLDER}/DawnCC/PrivateDetector/"
+PRIVATE_PATH=$(pwd)
+cd "${THIS}"
+
+if [ -d "" ]; then
+   rm -r "${ROOT_FOLDER}/libPrivate"
+fi
+
+if [ ! -f "${ROOT_FOLDER}/libPrivate" ]; then
+   mkdir "${ROOT_FOLDER}/libPrivate"
+fi
+
+cd "${ROOT_FOLDER}/libPrivate"
+CXX=g++-5 cmake -DLLVM_DIR=${LLVM_OUTPUT_DIR}/share/llvm/cmake ${PRIVATE_PATH}
+make -j4
+cd "${ROOT_FOLDER}"
