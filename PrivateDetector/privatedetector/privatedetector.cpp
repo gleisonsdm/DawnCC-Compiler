@@ -186,9 +186,6 @@ public:
                 if(FSL.isValid()){
 	                errs() <<"Variable declaration " << varName << " at line:" << FSL.getSpellingLineNumber() <<"\n";
                 }
-		ValueDecl *ValD = dyn_cast<ValueDecl>(VD);
-		ValueDecl value = *ValD;
-		inductionVars.insert(value,false); //the error happens at this line
 	}
 	// Add an else here, to find other declarations.
       return true;
@@ -230,11 +227,6 @@ public:
                             	}
 			    }
 		    }
-		    errs() <<"----------------------\n";
-		    for (auto& it:*v){
-                          errs() <<it.getNameAsString() <<" ";
-                  }
-                  errs() <<"\n";
 
 	    }
 	    return true;
